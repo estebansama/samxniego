@@ -3,12 +3,18 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { onAuthStateChanged } from "firebase/auth"
-import { auth } from "@/lib/firebaseClient"
+import { auth, isFirebaseConfigured } from "@/lib/firebaseClient"
 
 export function useAuthRedirect() {
   const router = useRouter()
 
   useEffect(() => {
+    // If Firebase is not configured, skip auth state listening
+    if (!isFirebaseConfigured || !auth) {
+      console.log("Firebase not configured, skipping auth state listener")
+      return
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
