@@ -6,7 +6,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createUserWithEmailAndPassword } from "firebase/auth"
 import { doc, setDoc } from "firebase/firestore"
-import { auth, db } from "@/lib/firebaseClient"
+import { auth, db, isFirebaseConfigured } from "@/lib/firebaseClient"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -31,7 +31,7 @@ export default function RegisterPage() {
   const router = useRouter()
 
   // Check if Firebase is available
-  const isFirebaseAvailable = auth !== null && db !== null
+  const isFirebaseAvailable = isFirebaseConfigured && auth !== null && db !== null
 
   const materiasList = [
     "Matemáticas",
@@ -186,7 +186,8 @@ export default function RegisterPage() {
 
       let errorMessage = "Error al crear la cuenta"
 
-      if (error.code) {
+      // Check if this is a Firebase-related error
+      if (error.code && error.code.startsWith("auth/")) {
         switch (error.code) {
           case "auth/email-already-in-use":
             errorMessage = "Ya existe una cuenta con este email"
@@ -200,17 +201,22 @@ export default function RegisterPage() {
           case "auth/network-request-failed":
             errorMessage = "Error de conexión. Verifica tu internet"
             break
+          case "auth/configuration-not-found":
+          case "auth/invalid-api-key":
+            errorMessage = "Error de configuración de Firebase"
+            console.log("Firebase configuration error, falling back to demo mode")
+            await handleDemoRegister()
+            return
           default:
-            errorMessage = error.message || "Error desconocido"
+            errorMessage = error.message || "Error de autenticación"
         }
+        setError(errorMessage)
       } else {
-        // If it's not a Firebase error, try demo mode
-        console.log("Falling back to demo mode due to error:", error)
+        // If it's not a Firebase error or Firebase is not configured, use demo mode
+        console.log("Non-Firebase error or Firebase not configured, using demo mode:", error.message)
         await handleDemoRegister()
         return
       }
-
-      setError(errorMessage)
     } finally {
       setLoading(false)
     }

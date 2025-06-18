@@ -1,8 +1,8 @@
-import { initializeApp, getApps } from "firebase/app"
-import { getAuth } from "firebase/auth"
-import { getFirestore } from "firebase/firestore"
+import { initializeApp, getApps, type FirebaseApp } from "firebase/app"
+import { getAuth, type Auth } from "firebase/auth"
+import { getFirestore, type Firestore } from "firebase/firestore"
 
-// Validate Firebase configuration
+// Validate Firebase configuration more thoroughly
 const validateFirebaseConfig = () => {
   const requiredVars = [
     "NEXT_PUBLIC_FIREBASE_API_KEY",
@@ -18,42 +18,50 @@ const validateFirebaseConfig = () => {
     return false
   }
 
+  // Check if values are not just empty strings or placeholder values
+  const hasValidValues = requiredVars.every((varName) => {
+    const value = process.env[varName]
+    return value && value.trim() !== "" && !value.includes("your_") && !value.includes("demo-")
+  })
+
+  if (!hasValidValues) {
+    console.warn("Firebase environment variables contain placeholder or empty values")
+    return false
+  }
+
   return true
 }
 
-// Firebase configuration with fallbacks for demo
+// Firebase configuration
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "demo-api-key",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain:
-    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
-    `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "demo-project"}.firebaseapp.com`,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "demo-project",
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebaseapp.com`,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket:
-    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
-    `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "demo-project"}.appspot.com`,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456",
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.appspot.com`,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 }
 
-let app
-let auth
-let db
+let app: FirebaseApp | null = null
+let auth: Auth | null = null
+let db: Firestore | null = null
+let isFirebaseConfigured = false
 
 try {
   // Check if Firebase config is valid
-  const isConfigValid = validateFirebaseConfig()
+  isFirebaseConfigured = validateFirebaseConfig()
 
-  if (!isConfigValid) {
-    console.warn("Firebase not properly configured. Using demo mode.")
-    // Create mock objects for demo purposes
-    auth = null
-    db = null
+  if (!isFirebaseConfigured) {
+    console.warn("Firebase not properly configured. Running in demo mode.")
+    console.info("To enable Firebase, please configure your environment variables.")
   } else {
-    // Initialize Firebase only if it hasn't been initialized already
+    // Only initialize Firebase if configuration is valid
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
 
-    // Initialize Firebase services
+    // Initialize Firebase services only after successful app initialization
     auth = getAuth(app)
     db = getFirestore(app)
 
@@ -61,10 +69,15 @@ try {
   }
 } catch (error) {
   console.error("Error initializing Firebase:", error)
-  console.warn("Falling back to demo mode")
+  console.warn("Falling back to demo mode due to initialization error")
+
+  // Reset everything to null on error
+  app = null
   auth = null
   db = null
+  isFirebaseConfigured = false
 }
 
-export { auth, db }
+// Export the Firebase services and configuration status
+export { auth, db, isFirebaseConfigured }
 export default app
