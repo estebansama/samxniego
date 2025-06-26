@@ -32,19 +32,6 @@ const validateFirebaseConfig = () => {
   return true
 }
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain:
-    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebaseapp.com`,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket:
-    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.appspot.com`,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-}
-
 let app: FirebaseApp | null = null
 let auth: Auth | null = null
 let db: Firestore | null = null
@@ -56,16 +43,35 @@ try {
 
   if (!isFirebaseConfigured) {
     console.warn("Firebase not properly configured. Running in demo mode.")
-    console.info("To enable Firebase, please configure your environment variables.")
+    console.info("To enable Firebase, please configure your environment variables in .env.local")
+    // Set everything to null for demo mode
+    app = null
+    auth = null
+    db = null
   } else {
+    // Firebase configuration - only create if validation passes
+    const firebaseConfig = {
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
+      authDomain:
+        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
+        `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebaseapp.com`,
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+      storageBucket:
+        process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.appspot.com`,
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
+      measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+    }
+
     // Only initialize Firebase if configuration is valid
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
 
-    // Initialize Firebase services only after successful app initialization
-    auth = getAuth(app)
-    db = getFirestore(app)
-
-    console.log("Firebase initialized successfully")
+    // Initialize Firebase services only in the browser and after successful app initialization
+    if (typeof window !== "undefined") {
+      auth = getAuth(app)
+      db = getFirestore(app)
+      console.log("Firebase initialized successfully")
+    }
   }
 } catch (error) {
   console.error("Error initializing Firebase:", error)
