@@ -1,21 +1,20 @@
 "use client"
 
-import { auth, isFirebaseConfigured } from "@/lib/firebaseClient"
-import { signInWithEmailAndPassword } from "firebase/auth"
-import type React from "react"
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { signInWithEmailAndPassword } from "firebase/auth"
+import { auth } from "@/lib/firebaseClient"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
+} from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Mail, Lock, LogIn, AlertCircle } from "lucide-react"
+import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle } from "lucide-react"
 
 export default function LoginPage() {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  })
+  const [formData, setFormData] = useState({ email: "", password: "" })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -35,48 +34,30 @@ export default function LoginPage() {
       setError("Por favor completa todos los campos")
       return false
     }
-
-    if (formData.password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres")
-      return false
-    }
-
     return true
   }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validateForm()) return
-
-    setLoading(true)
     setError("")
+    if (!validateForm()) return
+    setLoading(true)
 
     try {
-      if (!isFirebaseConfigured || !auth) {
-        throw new Error("Firebase no está configurado")
-      }
-
       const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password)
       const user = userCredential.user
 
-      // Simulación de carga de datos del perfil si lo necesitás
-      const userProfile = {
-        uid: user.uid,
-        email: user.email,
-        nombre: user.displayName || "Usuario",
-        tipo: "alumno", // Cambiar según datos reales si los guardás en Firestore
-      }
-
+      // Guardar en localStorage o redirigir según tipo
       if (typeof window !== "undefined") {
-        localStorage.setItem("clasio_user", JSON.stringify(userProfile))
+        localStorage.setItem("clasio_user", JSON.stringify(user))
         localStorage.setItem("token", await user.getIdToken())
       }
 
-      // Redirigir según tipo (ejemplo fijo, podés ajustarlo)
-      router.push("/alumno")
+      // 🔁 Temporal: Redirigimos a dashboard genérico
+      router.push("/docente") // o /alumno, /padre dependiendo del perfil
     } catch (error: any) {
-      console.error("Login error:", error)
-      setError("Credenciales inválidas o error al iniciar sesión")
+      console.error("Error al iniciar sesión:", error)
+      setError("Credenciales incorrectas o usuario no registrado.")
     } finally {
       setLoading(false)
     }
@@ -84,8 +65,8 @@ export default function LoginPage() {
 
   if (!isClient) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     )
   }
@@ -96,29 +77,17 @@ export default function LoginPage() {
         <Card className="shadow-2xl border-0 bg-white/90 backdrop-blur">
           <CardHeader className="text-center pb-8">
             <div className="flex justify-center mb-6">
-              <img
-                src="https://edu8uatvnzt2gwze.public.blob.vercel-storage.com/clasio-logo-JlTBTWFZiiSJdBi1ydgbVheAJPlfgR.png"
-                alt="Clasio Logo"
-                className="h-16 w-auto"
-                onError={(e) => {
-                  // Fallback to CSS logo if image fails to load
-                  e.target.style.display = "none"
-                  e.target.nextElementSibling.style.display = "flex"
-                }}
-              />
-              <div
-                className="h-16 w-16 bg-gradient-to-r from-primary to-secondary rounded-lg flex items-center justify-center shadow-lg"
-                style={{ display: "none" }}
-              >
+              <div className="h-16 w-16 bg-gradient-to-r from-primary to-secondary rounded-lg flex items-center justify-center shadow-lg">
                 <span className="text-2xl font-bold text-white">C</span>
               </div>
             </div>
             <CardTitle className="text-2xl font-bold text-gray-800">Iniciar Sesión</CardTitle>
-            <CardDescription className="text-gray-600">Accede a tu cuenta de Clasio</CardDescription>
+            <CardDescription className="text-gray-600">Accede a tu cuenta real de Clasio</CardDescription>
           </CardHeader>
 
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-6">
+              {/* Email */}
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium text-gray-700">
                   Email *
@@ -128,14 +97,17 @@ export default function LoginPage() {
                   <Input
                     id="email"
                     type="email"
+                    placeholder="tu@email.com"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     className="pl-10 h-12 border-2 border-gray-200 focus:border-primary"
+                    disabled={loading}
                     required
                   />
                 </div>
               </div>
 
+              {/* Password */}
               <div className="space-y-2">
                 <label htmlFor="password" className="text-sm font-medium text-gray-700">
                   Contraseña *
@@ -145,21 +117,25 @@ export default function LoginPage() {
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
+                    placeholder="Tu contraseña"
                     value={formData.password}
                     onChange={(e) => handleInputChange("password", e.target.value)}
                     className="pl-10 pr-10 h-12 border-2 border-gray-200 focus:border-primary"
+                    disabled={loading}
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    disabled={loading}
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
               </div>
 
+              {/* Error Message */}
               {error && (
                 <Alert variant="destructive" className="animate-slide-up">
                   <AlertCircle className="h-4 w-4" />
@@ -167,6 +143,7 @@ export default function LoginPage() {
                 </Alert>
               )}
 
+              {/* Submit Button */}
               <Button
                 type="submit"
                 disabled={loading}
@@ -174,7 +151,7 @@ export default function LoginPage() {
               >
                 {loading ? (
                   <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black" />
                     Iniciando sesión...
                   </div>
                 ) : (
@@ -186,23 +163,15 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center space-y-2">
-              <div className="text-sm text-gray-500">
-                ¿No tienes cuenta?{" "}
-                <button
-                  type="button"
-                  className="text-primary hover:text-primary/80 font-medium transition-colors"
-                  onClick={() => router.push("/register")}
-                >
-                  Regístrate aquí
-                </button>
-              </div>
+            {/* Link a registro */}
+            <div className="mt-6 text-center text-sm text-gray-500">
+              ¿No tienes cuenta?{" "}
               <button
                 type="button"
-                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                onClick={() => router.push("/")}
+                className="text-primary hover:text-primary/80 font-medium"
+                onClick={() => router.push("/register")}
               >
-                ← Volver al inicio
+                Regístrate aquí
               </button>
             </div>
           </CardContent>
