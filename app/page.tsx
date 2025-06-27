@@ -1,7 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { auth, isFirebaseConfigured } from "@/lib/firebaseClient"
+import { signInWithEmailAndPassword } from "firebase/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,29 +12,40 @@ import { Users, BookOpen, Sparkles } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [userType, setUserType] = useState("")
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
   const router = useRouter()
 
   const handleLogin = async () => {
-    if (!email || !userType) return
+    setError("")
+    if (!email || !password || !userType) {
+      setError("Por favor completa todos los campos")
+      return
+    }
+
+    if (!isFirebaseConfigured) {
+      setError("Firebase no está configurado correctamente")
+      return
+    }
 
     setLoading(true)
 
-    // Simular llamada a API
-    const response = await fetch("/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, tipo: userType }),
-    })
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, password)
+      const user = result.user
 
-    const data = await response.json()
+      // Podés extender esta lógica con Firestore para obtener info adicional
+      const userProfile = {
+        uid: user.uid,
+        email: user.email,
+        tipo: userType,
+      }
 
-    if (data.success) {
-      localStorage.setItem("clasio_token", data.token)
-      localStorage.setItem("clasio_user", JSON.stringify(data.user))
+      localStorage.setItem("clasio_user", JSON.stringify(userProfile))
+      localStorage.setItem("token", await user.getIdToken())
 
-      // Redirigir según el tipo de usuario
       switch (userType) {
         case "docente":
           router.push("/docente")
@@ -44,15 +57,18 @@ export default function LoginPage() {
           router.push("/padre")
           break
       }
+    } catch (err: any) {
+      setError("Error al iniciar sesión. Verifica tus datos.")
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/20 via-white to-secondary/20 flex items-center justify-center p-4">
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
-        {/* Hero Section */}
+        {/* Hero */}
         <div className="text-center lg:text-left space-y-6 animate-slide-up">
           <div className="flex items-center justify-center lg:justify-start gap-3 mb-8">
             <img
@@ -60,9 +76,9 @@ export default function LoginPage() {
               alt="Clasio Logo"
               className="h-20 w-auto"
               onError={(e) => {
-                // Fallback to CSS logo if image fails to load
-                e.target.style.display = "none"
-                e.target.nextElementSibling.style.display = "flex"
+                e.currentTarget.style.display = "none"
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement
+                if (fallback) fallback.style.display = "flex"
               }}
             />
             <div
@@ -102,7 +118,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Login Form */}
+        {/* Login */}
         <Card className="w-full max-w-md mx-auto animate-bounce-in shadow-2xl border-0 bg-white/80 backdrop-blur">
           <CardHeader className="text-center pb-8">
             <CardTitle className="text-2xl font-bold text-gray-800">Iniciar Sesión</CardTitle>
@@ -122,6 +138,17 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Contraseña</label>
+              <Input
+                type="password"
+                placeholder="Tu contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-12 border-2 border-gray-200 focus:border-primary"
+              />
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Tipo de Usuario</label>
               <Select value={userType} onValueChange={setUserType}>
                 <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-primary">
@@ -135,16 +162,19 @@ export default function LoginPage() {
               </Select>
             </div>
 
+            {error && (
+              <div className="text-sm text-red-600 bg-red-100 p-2 rounded-md border border-red-200">{error}</div>
+            )}
+
             <Button
               onClick={handleLogin}
-              disabled={!email || !userType || loading}
+              disabled={!email || !password || !userType || loading}
               className="w-full h-12 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-black font-semibold text-lg transition-all duration-300 transform hover:scale-105"
             >
               {loading ? "Ingresando..." : "Ingresar a Clasio"}
             </Button>
 
             <div className="text-center text-sm text-gray-500 mt-4 space-y-2">
-              <p>Demo - Usa cualquier email para probar</p>
               <div>
                 ¿No tienes cuenta?{" "}
                 <button
