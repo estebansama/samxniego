@@ -196,7 +196,9 @@ export default function LoginPage() {
         <Card className="shadow-2xl border-0 bg-white/90 backdrop-blur">
           <CardHeader className="text-center pb-8">
             <div className="flex justify-center mb-6">
-              <img src="/clasio-logo.png" alt="Clasio Logo" className="h-16 w-auto" />
+              <div className="h-16 w-16 bg-gradient-to-r from-primary to-secondary rounded-lg flex items-center justify-center shadow-lg">
+                <span className="text-2xl font-bold text-white">C</span>
+              </div>
             </div>
             <CardTitle className="text-2xl font-bold text-gray-800">Iniciar Sesión</CardTitle>
             <CardDescription className="text-gray-600">Accede a tu cuenta de Clasio</CardDescription>

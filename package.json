@@ -5,10 +5,10 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
+    "firebase:test": "node scripts/test-firestore.js",
+    "firebase:verify": "node scripts/verify-firebase-config.js",
     "lint": "next lint",
-    "start": "next start",
-    "test-firestore": "node scripts/test-firestore.js",
-    "verify-firebase": "node scripts/verify-firebase-config.js"
+    "start": "next start"
   },
   "dependencies": {
     "@ai-sdk/google": "latest",

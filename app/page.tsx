@@ -54,11 +54,17 @@ export default function LoginPage() {
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
         {/* Hero Section */}
         <div className="text-center lg:text-left space-y-6 animate-slide-up">
-          <div className="flex items-center justify-center lg:justify-start gap-3 mb-8 leading-7 leading-3">
-            <img src="/clasio-logo.png" alt="Clasio Logo" className="h-20 w-auto" />
+          <div className="flex items-center justify-center lg:justify-start gap-3 mb-8">
+            <div className="h-20 w-20 bg-gradient-to-r from-primary to-secondary rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-3xl font-bold text-white">C</span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Clasio</h1>
+              <p className="text-sm text-gray-600">Educación Inteligente</p>
+            </div>
           </div>
 
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-800 leading-tight font-serif font-sans font-serif">
+          <h2 className="text-3xl lg:text-4xl font-bold text-gray-800 leading-tight">
             Transforma el celular en tu aliado educativo
           </h2>
 
