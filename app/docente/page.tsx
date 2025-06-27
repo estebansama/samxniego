@@ -96,7 +96,22 @@ export default function DocentePage() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Volver
             </Button>
-            <img src="/clasio-logo.png" alt="Clasio Logo" className="h-12 w-auto" />
+            <img
+              src="https://edu8uatvnzt2gwze.public.blob.vercel-storage.com/clasio-logo-JlTBTWFZiiSJdBi1ydgbVheAJPlfgR.png"
+              alt="Clasio Logo"
+              className="h-12 w-auto"
+              onError={(e) => {
+                // Fallback to CSS logo if image fails to load
+                e.target.style.display = "none"
+                e.target.nextElementSibling.style.display = "flex"
+              }}
+            />
+            <div
+              className="h-12 w-12 bg-gradient-to-r from-primary to-secondary rounded-lg flex items-center justify-center shadow-lg"
+              style={{ display: "none" }}
+            >
+              <span className="text-xl font-bold text-white">C</span>
+            </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Panel Docente</h1>
               <p className="text-gray-600">Generador de Minijuegos con IA</p>

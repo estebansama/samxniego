@@ -55,7 +55,20 @@ export default function LoginPage() {
         {/* Hero Section */}
         <div className="text-center lg:text-left space-y-6 animate-slide-up">
           <div className="flex items-center justify-center lg:justify-start gap-3 mb-8">
-            <div className="h-20 w-20 bg-gradient-to-r from-primary to-secondary rounded-xl flex items-center justify-center shadow-lg">
+            <img
+              src="https://edu8uatvnzt2gwze.public.blob.vercel-storage.com/clasio-logo-JlTBTWFZiiSJdBi1ydgbVheAJPlfgR.png"
+              alt="Clasio Logo"
+              className="h-20 w-auto"
+              onError={(e) => {
+                // Fallback to CSS logo if image fails to load
+                e.target.style.display = "none"
+                e.target.nextElementSibling.style.display = "flex"
+              }}
+            />
+            <div
+              className="h-20 w-20 bg-gradient-to-r from-primary to-secondary rounded-xl flex items-center justify-center shadow-lg"
+              style={{ display: "none" }}
+            >
               <span className="text-3xl font-bold text-white">C</span>
             </div>
             <div>
