@@ -1,125 +1,232 @@
-# Firebase Setup Guide for Clasio App
+# Configuración de Firebase para Clasio
 
-## 🚀 Quick Start
+Esta guía te ayudará a configurar Firebase para la aplicación Clasio.
 
-### Step 1: Create Firebase Project
-1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Click "Create a project"
-3. Name: `clasio-app` (or your preference)
-4. Enable Google Analytics (recommended)
+## 📋 Requisitos Previos
 
-### Step 2: Enable Authentication
-1. Go to **Authentication** → **Get started**
-2. **Sign-in method** tab → Enable **Email/Password**
-3. Save changes
+- Una cuenta de Google
+- Acceso a [Firebase Console](https://console.firebase.google.com/)
+- Node.js instalado en tu sistema
 
-### Step 3: Create Firestore Database
-1. Go to **Firestore Database** → **Create database**
-2. Start in **test mode** (for now)
-3. Choose your location (closest to users)
+## 🚀 Configuración Paso a Paso
 
-### Step 4: Get Web App Configuration
-1. **Project Settings** (gear icon) → **General** tab
-2. Scroll to "Your apps" → Click **Web** icon `</>`
-3. Register app: `clasio-web`
-4. Copy the `firebaseConfig` object
+### 1. Crear Proyecto en Firebase
 
-### Step 5: Generate Service Account Key
-1. **Project Settings** → **Service accounts** tab
-2. Click **Generate new private key**
-3. Download JSON file (keep secure!)
+1. Ve a [Firebase Console](https://console.firebase.google.com/)
+2. Haz clic en "Crear un proyecto"
+3. Ingresa el nombre del proyecto: `clasio-app` (o el nombre que prefieras)
+4. Acepta los términos y condiciones
+5. Configura Google Analytics (opcional pero recomendado)
+6. Haz clic en "Crear proyecto"
 
-## 🔧 Environment Configuration
+### 2. Configurar Authentication
 
-### Create .env.local
-Copy `.env.example` to `.env.local` and fill in your values:
+1. En el panel izquierdo, ve a **Authentication**
+2. Haz clic en "Comenzar"
+3. Ve a la pestaña **Sign-in method**
+4. Habilita **Email/Password**:
+   - Haz clic en "Email/Password"
+   - Activa la primera opción (Email/Password)
+   - Guarda los cambios
 
-\`\`\`bash
-cp .env.example .env.local
-\`\`\`
+### 3. Configurar Firestore Database
 
-### Client Configuration (from Web App Config)
-\`\`\`env
-NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyC...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
-NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
-\`\`\`
+1. En el panel izquierdo, ve a **Firestore Database**
+2. Haz clic en "Crear base de datos"
+3. Selecciona **Comenzar en modo de prueba** (por ahora)
+4. Elige una ubicación (recomendado: us-central)
+5. Haz clic en "Listo"
 
-### Server Configuration (from Service Account JSON)
-\`\`\`env
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----\n"
-\`\`\`
+### 4. Configurar Reglas de Seguridad
 
-## 🔐 Security Rules
+#### Reglas de Firestore
 
-Update Firestore rules in Firebase Console:
+Ve a **Firestore Database > Reglas** y reemplaza el contenido con:
 
 \`\`\`javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can read/write their own data
+    // Usuarios pueden leer y escribir sus propios datos
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Authenticated users can access app data
-    match /{collection}/{document} {
+    // Datos públicos de usuarios (solo lectura para otros)
+    match /users/{userId} {
+      allow read: if request.auth != null;
+    }
+    
+    // Minijuegos - los usuarios pueden crear y leer
+    match /minijuegos/{gameId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == resource.data.createdBy;
+      allow update: if request.auth != null && request.auth.uid == resource.data.createdBy;
+    }
+    
+    // Votaciones - los usuarios pueden participar
+    match /votaciones/{voteId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+    }
+    
+    // Informes - solo lectura para usuarios autenticados
+    match /informes/{reportId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+    }
+  }
+}
+\`\`\`
+
+#### Reglas de Storage (si usas Firebase Storage)
+
+Ve a **Storage > Reglas** y configura:
+
+\`\`\`javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
       allow read, write: if request.auth != null;
     }
   }
 }
 \`\`\`
 
-## ✅ Verification
+### 5. Obtener Configuración del Proyecto
 
-Run the verification script:
+1. Ve a **Configuración del proyecto** (ícono de engranaje)
+2. En la pestaña **General**, baja hasta "Tus aplicaciones"
+3. Haz clic en "Agregar aplicación" y selecciona **Web** (<//>)
+4. Ingresa un nombre para tu aplicación: `clasio-web`
+5. **NO** marques "También configurar Firebase Hosting"
+6. Haz clic en "Registrar aplicación"
+7. Copia la configuración que aparece
+
+### 6. Configurar Variables de Entorno
+
+1. En tu proyecto, copia `.env.example` a `.env.local`:
+   \`\`\`bash
+   cp .env.example .env.local
+   \`\`\`
+
+2. Reemplaza los valores en `.env.local` con tu configuración de Firebase:
+
+\`\`\`env
+# Firebase Client Configuration
+NEXT_PUBLIC_FIREBASE_API_KEY=tu_api_key_aqui
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=tu-proyecto.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=tu-proyecto-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=tu-proyecto.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=tu_messaging_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=tu_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=tu_measurement_id
+\`\`\`
+
+### 7. Configurar Firebase Admin SDK (Opcional)
+
+Para operaciones del servidor, necesitas configurar el Admin SDK:
+
+1. Ve a **Configuración del proyecto > Cuentas de servicio**
+2. Haz clic en "Generar nueva clave privada"
+3. Se descargará un archivo JSON
+4. Abre el archivo y copia los valores:
+
+\`\`\`env
+FIREBASE_PROJECT_ID=tu-proyecto-id
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@tu-proyecto.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\ntu_clave_privada_aqui\n-----END PRIVATE KEY-----"
+\`\`\`
+
+**⚠️ Importante**: Mantén la clave privada segura y nunca la subas a repositorios públicos.
+
+### 8. Verificar Configuración
+
+Ejecuta el script de verificación:
+
 \`\`\`bash
 npm run verify-firebase
 \`\`\`
 
-## 🚨 Troubleshooting
+Este script verificará que todas las variables estén configuradas correctamente.
 
-### Common Issues:
+### 9. Probar la Aplicación
 
-1. **"Component auth has not been registered yet"**
-   - Restart development server: `npm run dev`
-   - Check all environment variables are set
+1. Inicia el servidor de desarrollo:
+   \`\`\`bash
+   npm run dev
+   \`\`\`
 
-2. **"Invalid API key"**
-   - Verify `NEXT_PUBLIC_FIREBASE_API_KEY` is correct
-   - No extra spaces or quotes
+2. Ve a `http://localhost:3000/register`
+3. Intenta registrar un usuario
+4. Verifica en Firebase Console que el usuario se creó correctamente
 
-3. **"Project not found"**
-   - Check `NEXT_PUBLIC_FIREBASE_PROJECT_ID` matches Firebase project
+## 🔧 Configuración Adicional
 
-4. **Private key issues**
-   - Ensure `FIREBASE_PRIVATE_KEY` includes `\n` characters
-   - Wrap in double quotes
+### Configurar Dominios Autorizados
 
-### Getting Help:
-- Check Firebase Console for error messages
-- Verify all environment variables
-- Restart development server after changes
+1. Ve a **Authentication > Settings**
+2. En "Authorized domains", agrega:
+   - `localhost` (para desarrollo)
+   - Tu dominio de producción
 
-## 🎯 Testing
+### Configurar Índices de Firestore
 
-1. Start development server: `npm run dev`
-2. Visit: `http://localhost:3000/register`
-3. Create a test account
-4. Check browser console for Firebase messages
-5. Verify user appears in Firebase Console → Authentication
+Si tu aplicación requiere consultas complejas, es posible que necesites crear índices:
 
-## 🚀 Next Steps
+1. Ve a **Firestore Database > Índices**
+2. Firebase te sugerirá índices automáticamente cuando ejecutes consultas que los requieran
 
-Once Firebase is working:
-- Set up AI integration (OpenAI/Gemini)
-- Configure production environment
-- Add monitoring and analytics
-- Deploy to Vercel
+### Configurar Límites y Cuotas
+
+1. Ve a **Configuración del proyecto > Uso y facturación**
+2. Configura alertas de presupuesto si es necesario
+3. Revisa los límites del plan gratuito
+
+## 🚨 Solución de Problemas
+
+### Error: "Firebase not configured"
+
+- Verifica que todas las variables de entorno estén configuradas
+- Ejecuta `npm run verify-firebase` para diagnosticar problemas
+
+### Error: "Permission denied"
+
+- Revisa las reglas de seguridad de Firestore
+- Asegúrate de que el usuario esté autenticado
+
+### Error: "Network request failed"
+
+- Verifica tu conexión a internet
+- Revisa que los dominios estén autorizados en Firebase
+
+### Error: "Invalid API key"
+
+- Verifica que la API key sea correcta
+- Asegúrate de que la aplicación web esté habilitada en Firebase
+
+## 📚 Recursos Adicionales
+
+- [Documentación oficial de Firebase](https://firebase.google.com/docs)
+- [Guía de Authentication](https://firebase.google.com/docs/auth)
+- [Guía de Firestore](https://firebase.google.com/docs/firestore)
+- [Reglas de seguridad](https://firebase.google.com/docs/rules)
+
+## 🆘 Soporte
+
+Si tienes problemas con la configuración:
+
+1. Revisa los logs de la consola del navegador
+2. Ejecuta `npm run verify-firebase` para diagnosticar
+3. Consulta la documentación oficial de Firebase
+4. Revisa que todas las variables de entorno estén correctamente configuradas
+
+---
+
+**Nota**: Esta configuración es para desarrollo. Para producción, asegúrate de:
+- Configurar reglas de seguridad más estrictas
+- Habilitar la facturación si es necesario
+- Configurar monitoreo y alertas
+- Implementar backups regulares

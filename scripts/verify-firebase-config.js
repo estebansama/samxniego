@@ -1,136 +1,108 @@
-// Firebase Configuration Verification Script
-// Run with: node scripts/verify-firebase-config.js
-
-const path = require("path")
 const fs = require("fs")
+const path = require("path")
 
-console.log("🔍 Firebase Configuration Verification\n")
+console.log("🔍 Verificando configuración de Firebase...\n")
 
-// Check if .env.local exists
+// Verificar archivo .env.local
 const envPath = path.join(process.cwd(), ".env.local")
 const envExists = fs.existsSync(envPath)
 
-console.log("📁 Environment File Check:")
-console.log(`   .env.local exists: ${envExists ? "✅" : "❌"}`)
+console.log(`📁 Archivo .env.local: ${envExists ? "✅ Encontrado" : "❌ No encontrado"}`)
 
-if (!envExists) {
-  console.log("\n❌ .env.local file not found!")
-  console.log("   Please create .env.local file in your project root.")
-  console.log("   You can copy from .env.example: cp .env.example .env.local")
-  process.exit(1)
-}
+if (envExists) {
+  const envContent = fs.readFileSync(envPath, "utf8")
 
-// Load environment variables
-require("dotenv").config({ path: envPath })
+  // Variables requeridas para Firebase
+  const requiredVars = [
+    "NEXT_PUBLIC_FIREBASE_API_KEY",
+    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+    "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
+    "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+    "NEXT_PUBLIC_FIREBASE_APP_ID",
+  ]
 
-// Required Firebase environment variables
-const requiredVars = [
-  "NEXT_PUBLIC_FIREBASE_API_KEY",
-  "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
-  "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
-  "NEXT_PUBLIC_FIREBASE_APP_ID",
-]
+  console.log("\n🔧 Variables de Firebase:")
 
-const optionalVars = [
-  "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
-  "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
-  "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID",
-]
+  const missingVars = []
+  const demoVars = []
 
-const serverVars = ["FIREBASE_PROJECT_ID", "FIREBASE_CLIENT_EMAIL", "FIREBASE_PRIVATE_KEY"]
+  requiredVars.forEach((varName) => {
+    const regex = new RegExp(`^${varName}=(.+)$`, "m")
+    const match = envContent.match(regex)
 
-console.log("\n🔑 Required Client Variables:")
-let allRequired = true
-requiredVars.forEach((varName) => {
-  const value = process.env[varName]
-  const exists = !!value
-  const isPlaceholder = value && (value.includes("your_") || value.includes("demo-") || value.includes("placeholder"))
+    if (match) {
+      const value = match[1].trim()
+      if (value.includes("demo") || value.includes("your_") || value === "") {
+        demoVars.push(varName)
+        console.log(`  ${varName}: ⚠️  Valor demo/placeholder`)
+      } else {
+        console.log(`  ${varName}: ✅ Configurado`)
+      }
+    } else {
+      missingVars.push(varName)
+      console.log(`  ${varName}: ❌ Faltante`)
+    }
+  })
 
-  if (!exists) {
-    console.log(`   ${varName}: ❌ Missing`)
-    allRequired = false
-  } else if (isPlaceholder) {
-    console.log(`   ${varName}: ⚠️  Placeholder value detected`)
-    allRequired = false
-  } else {
-    console.log(`   ${varName}: ✅ Configured`)
+  // Variables opcionales
+  const optionalVars = [
+    "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID",
+    "FIREBASE_PROJECT_ID",
+    "FIREBASE_CLIENT_EMAIL",
+    "FIREBASE_PRIVATE_KEY",
+  ]
+
+  console.log("\n🔧 Variables opcionales:")
+
+  optionalVars.forEach((varName) => {
+    const regex = new RegExp(`^${varName}=(.+)$`, "m")
+    const match = envContent.match(regex)
+
+    if (match) {
+      const value = match[1].trim()
+      if (value.includes("demo") || value.includes("your_") || value === "") {
+        console.log(`  ${varName}: ⚠️  Valor demo/placeholder`)
+      } else {
+        console.log(`  ${varName}: ✅ Configurado`)
+      }
+    } else {
+      console.log(`  ${varName}: ⚪ No configurado`)
+    }
+  })
+
+  // Resumen
+  console.log("\n📊 Resumen:")
+
+  if (missingVars.length === 0 && demoVars.length === 0) {
+    console.log("✅ Firebase está completamente configurado")
+    console.log("🚀 La aplicación funcionará con Firebase real")
+  } else if (missingVars.length > 0) {
+    console.log("❌ Faltan variables requeridas de Firebase")
+    console.log("🔧 La aplicación funcionará en modo demo")
+    console.log("\nVariables faltantes:")
+    missingVars.forEach((varName) => console.log(`  - ${varName}`))
+  } else if (demoVars.length > 0) {
+    console.log("⚠️  Se encontraron valores demo/placeholder")
+    console.log("🔧 La aplicación funcionará en modo demo")
+    console.log("\nVariables con valores demo:")
+    demoVars.forEach((varName) => console.log(`  - ${varName}`))
   }
-})
 
-console.log("\n🔧 Optional Client Variables:")
-optionalVars.forEach((varName) => {
-  const value = process.env[varName]
-  const exists = !!value
-  const isPlaceholder = value && (value.includes("your_") || value.includes("demo-"))
-
-  if (!exists) {
-    console.log(`   ${varName}: ⚪ Not set (will use default)`)
-  } else if (isPlaceholder) {
-    console.log(`   ${varName}: ⚠️  Placeholder value`)
-  } else {
-    console.log(`   ${varName}: ✅ Configured`)
-  }
-})
-
-console.log("\n🔐 Server Variables (for Admin SDK):")
-let serverConfigured = true
-serverVars.forEach((varName) => {
-  const value = process.env[varName]
-  const exists = !!value
-  const isPlaceholder = value && (value.includes("your_") || value.includes("demo-"))
-
-  if (!exists) {
-    console.log(`   ${varName}: ❌ Missing`)
-    serverConfigured = false
-  } else if (isPlaceholder) {
-    console.log(`   ${varName}: ⚠️  Placeholder value`)
-    serverConfigured = false
-  } else {
-    console.log(`   ${varName}: ✅ Configured`)
-  }
-})
-
-// AI Configuration Check
-console.log("\n🤖 AI Integration Variables:")
-const aiVars = ["OPENAI_API_KEY", "API_KEY"]
-let aiConfigured = false
-aiVars.forEach((varName) => {
-  const value = process.env[varName]
-  const exists = !!value
-  const isPlaceholder = value && (value.includes("your_") || value.includes("demo-"))
-
-  if (!exists) {
-    console.log(`   ${varName}: ⚪ Not set`)
-  } else if (isPlaceholder) {
-    console.log(`   ${varName}: ⚠️  Placeholder value`)
-  } else {
-    console.log(`   ${varName}: ✅ Configured`)
-    aiConfigured = true
-  }
-})
-
-// Summary
-console.log("\n📊 Configuration Summary:")
-console.log(`   Firebase Client: ${allRequired ? "✅ Ready" : "❌ Needs configuration"}`)
-console.log(`   Firebase Server: ${serverConfigured ? "✅ Ready" : "❌ Needs configuration"}`)
-console.log(`   AI Integration: ${aiConfigured ? "✅ Ready" : "⚪ Optional"}`)
-
-if (allRequired) {
-  console.log("\n🎉 Firebase client configuration looks good!")
-  console.log("   You can now test authentication and database features.")
+  console.log("\n📖 Para configurar Firebase real:")
+  console.log("1. Ve a https://console.firebase.google.com/")
+  console.log("2. Crea un nuevo proyecto o selecciona uno existente")
+  console.log("3. Ve a Configuración del proyecto > General")
+  console.log('4. En "Tus aplicaciones", agrega una aplicación web')
+  console.log("5. Copia la configuración y reemplaza los valores en .env.local")
+  console.log("6. Consulta FIREBASE_SETUP.md para instrucciones detalladas")
 } else {
-  console.log("\n⚠️  Firebase configuration incomplete.")
-  console.log("   The app will run in demo mode until properly configured.")
+  console.log("\n❌ No se encontró el archivo .env.local")
+  console.log("🔧 La aplicación funcionará en modo demo")
+  console.log("\n📝 Para crear el archivo .env.local:")
+  console.log("1. Copia .env.example a .env.local")
+  console.log("2. Configura las variables de Firebase")
+  console.log("3. Consulta FIREBASE_SETUP.md para instrucciones detalladas")
 }
 
-if (!serverConfigured) {
-  console.log("\n💡 To enable server-side features:")
-  console.log("   1. Generate a service account key in Firebase Console")
-  console.log("   2. Add the server configuration variables to .env.local")
-}
-
-console.log("\n🚀 Next Steps:")
-console.log("   1. Run: npm run dev")
-console.log("   2. Visit: http://localhost:3000/register")
-console.log("   3. Try creating an account")
-console.log("   4. Check browser console for Firebase messages")
+console.log("\n" + "=".repeat(50))
