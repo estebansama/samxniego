@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Textarea } from "@/components/ui/textarea"
-import { Users, Target, Clock, CheckCircle, AlertCircle } from "lucide-react"
+import { Users, Clock, Target, CheckCircle, X } from "lucide-react"
 
 interface TeamChallengeProps {
   challengeData: {
@@ -14,104 +13,48 @@ interface TeamChallengeProps {
     tareas: string[]
     equiposRequeridos: number
     tiempoTotal: number
+    cargando?: boolean
   }
-  onComplete: (resultado: any) => void
+  onComplete: (resultado: { puntos: number; colaboracion: string }) => void
   onClose: () => void
 }
 
 export function TeamChallenge({ challengeData, onComplete, onClose }: TeamChallengeProps) {
-  const [fase, setFase] = useState<"formacion" | "planificacion" | "ejecucion" | "presentacion" | "resultados">(
+  const [tiempoRestante, setTiempoRestante] = useState(challengeData.tiempoTotal || 600)
+  const [fase, setFase] = useState<"formacion" | "planificacion" | "ejecucion" | "presentacion" | "resultado">(
     "formacion",
   )
-  const [tiempoRestante, setTiempoRestante] = useState(challengeData.tiempoTotal || 600)
-  const [equipos, setEquipos] = useState<
-    Array<{
-      id: number
-      nombre: string
-      miembros: string[]
-      tareasAsignadas: string[]
-      progreso: number
-      solucion: string
-    }>
-  >([])
-  const [equipoActual, setEquipoActual] = useState(0)
-  const [solucionActual, setSolucionActual] = useState("")
+  const [equipoFormado, setEquipoFormado] = useState(false)
+  const [tareasCompletadas, setTareasCompletadas] = useState<string[]>([])
+  const [rolElegido, setRolElegido] = useState<string | null>(null)
+  const [colaboracionScore, setColaboracionScore] = useState(0)
 
   useEffect(() => {
-    // Inicializar equipos
-    const nuevosEquipos = Array.from({ length: challengeData.equiposRequeridos }, (_, index) => ({
-      id: index + 1,
-      nombre: `Equipo ${index + 1}`,
-      miembros: [`Estudiante ${index * 2 + 1}`, `Estudiante ${index * 2 + 2}`],
-      tareasAsignadas: challengeData.tareas.slice(
-        index * Math.floor(challengeData.tareas.length / challengeData.equiposRequeridos),
-        (index + 1) * Math.floor(challengeData.tareas.length / challengeData.equiposRequeridos),
-      ),
-      progreso: 0,
-      solucion: "",
-    }))
-    setEquipos(nuevosEquipos)
-  }, [challengeData])
+    if (challengeData.cargando) return
 
-  useEffect(() => {
     const timer = setInterval(() => {
       setTiempoRestante((prev) => {
         if (prev <= 1) {
-          avanzarFase()
-          return challengeData.tiempoTotal || 600
+          if (fase === "formacion") {
+            setFase("planificacion")
+            return 120 // 2 minutos para planificación
+          } else if (fase === "planificacion") {
+            setFase("ejecucion")
+            return 300 // 5 minutos para ejecución
+          } else if (fase === "ejecucion") {
+            setFase("presentacion")
+            return 120 // 2 minutos para presentación
+          } else if (fase === "presentacion") {
+            setFase("resultado")
+            return 0
+          }
         }
         return prev - 1
       })
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [fase])
-
-  const avanzarFase = () => {
-    const fases = ["formacion", "planificacion", "ejecucion", "presentacion", "resultados"]
-    const currentIndex = fases.indexOf(fase)
-    if (currentIndex < fases.length - 1) {
-      setFase(fases[currentIndex + 1] as any)
-      setTiempoRestante(challengeData.tiempoTotal || 600)
-    }
-  }
-
-  const actualizarProgreso = (equipoId: number, nuevoProgreso: number) => {
-    const nuevosEquipos = equipos.map((equipo) =>
-      equipo.id === equipoId ? { ...equipo, progreso: Math.min(100, nuevoProgreso) } : equipo,
-    )
-    setEquipos(nuevosEquipos)
-  }
-
-  const guardarSolucion = () => {
-    const nuevosEquipos = equipos.map((equipo) =>
-      equipo.id === equipos[equipoActual].id ? { ...equipo, solucion: solucionActual } : equipo,
-    )
-    setEquipos(nuevosEquipos)
-    setSolucionActual("")
-
-    if (equipoActual < equipos.length - 1) {
-      setEquipoActual(equipoActual + 1)
-    } else {
-      setFase("resultados")
-      calcularResultados()
-    }
-  }
-
-  const calcularResultados = () => {
-    const promedioProgreso = equipos.reduce((acc, eq) => acc + eq.progreso, 0) / equipos.length
-    const solucionesCompletas = equipos.filter((eq) => eq.solucion.length > 0).length
-
-    setTimeout(() => {
-      onComplete({
-        promedioProgreso,
-        solucionesCompletas,
-        equiposParticipantes: equipos.length,
-        puntos: Math.round(promedioProgreso * 0.5 + solucionesCompletas * 20),
-        colaboracion: promedioProgreso > 80 ? "Excelente" : promedioProgreso > 60 ? "Buena" : "Necesita mejorar",
-      })
-    }, 2000)
-  }
+  }, [fase, challengeData.cargando])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -119,274 +62,222 @@ export function TeamChallenge({ challengeData, onComplete, onClose }: TeamChalle
     return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
-  return (
-    <Card className="w-full max-w-5xl mx-auto shadow-2xl border-0 bg-gradient-to-r from-blue-50 to-cyan-50">
-      <CardHeader className="text-center">
-        <div className="flex items-center justify-between mb-4">
-          <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">👥 DESAFÍO DE EQUIPO</Badge>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-gray-600" />
-              <span className="font-mono text-lg">{formatTime(tiempoRestante)}</span>
-            </div>
-            <Button onClick={onClose} variant="outline" size="sm">
-              Cerrar
-            </Button>
-          </div>
-        </div>
+  const formarEquipo = () => {
+    setEquipoFormado(true)
+    setFase("planificacion")
+    setTiempoRestante(120)
+    setColaboracionScore((prev) => prev + 20)
+  }
 
-        <CardTitle className="text-xl">{challengeData.pregunta}</CardTitle>
-        <CardDescription>
-          <Badge variant="outline" className="mr-2">
-            Fase: {fase}
-          </Badge>
-          <Badge variant="outline" className="mr-2">
-            {equipos.length} equipos
-          </Badge>
-          Colabora para resolver el desafío
-        </CardDescription>
+  const elegirRol = (rol: string) => {
+    setRolElegido(rol)
+    setColaboracionScore((prev) => prev + 15)
+  }
+
+  const completarTarea = (tarea: string) => {
+    if (!tareasCompletadas.includes(tarea)) {
+      setTareasCompletadas([...tareasCompletadas, tarea])
+      setColaboracionScore((prev) => prev + 25)
+    }
+  }
+
+  const finalizarDesafio = () => {
+    const puntosBase = 80
+    const bonusPorTareas = tareasCompletadas.length * 20
+    const bonusPorColaboracion = colaboracionScore
+    const puntosTotal = puntosBase + bonusPorTareas + bonusPorColaboracion
+
+    const nivelColaboracion =
+      colaboracionScore >= 100 ? "Excelente" : colaboracionScore >= 60 ? "Buena" : "Satisfactoria"
+
+    const resultado = {
+      puntos: puntosTotal,
+      colaboracion: nivelColaboracion,
+    }
+
+    onComplete(resultado)
+  }
+
+  if (challengeData.cargando) {
+    return (
+      <Card className="shadow-2xl border-0 bg-gradient-to-r from-blue-100 to-green-100">
+        <CardContent className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-blue-800">Preparando desafío colaborativo...</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="shadow-2xl border-0 bg-gradient-to-r from-blue-50 to-green-50 animate-bounce-in">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500 rounded-lg">
+              <Users className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">Desafío Colaborativo</CardTitle>
+              <CardDescription className="flex items-center gap-4 mt-2">
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formatTime(tiempoRestante)}
+                </Badge>
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Target className="h-3 w-3" />
+                  Fase: {fase}
+                </Badge>
+                <Badge className="bg-blue-500 text-white">Colaboración: {colaboracionScore}%</Badge>
+              </CardDescription>
+            </div>
+          </div>
+          <Button onClick={onClose} variant="outline" size="sm">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Progreso de la actividad */}
+        {/* Desafío */}
+        <div className="p-4 bg-white rounded-lg border-l-4 border-blue-500">
+          <h3 className="font-semibold text-blue-800 mb-2">Desafío del Equipo</h3>
+          <p className="text-gray-700">{challengeData.pregunta}</p>
+        </div>
+
+        {/* Progreso del tiempo */}
         <div className="space-y-2">
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>Progreso del Desafío</span>
-            <span>{["formacion", "planificacion", "ejecucion", "presentacion", "resultados"].indexOf(fase) + 1}/5</span>
+          <div className="flex justify-between text-sm">
+            <span>Tiempo restante</span>
+            <span className="font-mono">{formatTime(tiempoRestante)}</span>
           </div>
           <Progress
-            value={(["formacion", "planificacion", "ejecucion", "presentacion", "resultados"].indexOf(fase) + 1) * 20}
+            value={((challengeData.tiempoTotal - tiempoRestante) / challengeData.tiempoTotal) * 100}
             className="h-2"
           />
         </div>
 
-        {/* Formación de equipos */}
+        {/* Fase de Formación */}
         {fase === "formacion" && (
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg text-center">👥 Formación de Equipos</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {equipos.map((equipo) => (
-                <Card key={equipo.id} className="border-2 border-blue-200 bg-blue-50">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Users className="h-4 w-4 text-blue-600" />
-                      {equipo.nombre}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold">Miembros:</p>
-                      {equipo.miembros.map((miembro, index) => (
-                        <Badge key={index} variant="outline" className="mr-1">
-                          {miembro}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            <div className="text-center">
-              <Button onClick={avanzarFase} className="bg-primary text-black">
-                Comenzar Planificación
+            <h4 className="font-semibold text-gray-800">Formación de Equipos</h4>
+            <div className="p-4 bg-yellow-50 rounded-lg">
+              <p className="text-yellow-800 mb-4">
+                Se necesitan {challengeData.equiposRequeridos} equipos para este desafío. ¡Únete a un equipo!
+              </p>
+              <Button onClick={formarEquipo} className="bg-blue-500 text-white">
+                Unirse al Equipo Alpha
               </Button>
             </div>
           </div>
         )}
 
-        {/* Planificación */}
+        {/* Fase de Planificación */}
         {fase === "planificacion" && (
-          <div className="space-y-6">
-            <h3 className="font-semibold text-lg text-center">📋 Asignación de Tareas</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-semibold mb-3">Tareas del Proyecto:</h4>
-                <div className="space-y-2">
-                  {challengeData.tareas.map((tarea, index) => (
-                    <div key={index} className="p-3 bg-white rounded border border-gray-200">
-                      <div className="flex items-center gap-2">
-                        <Target className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm">{tarea}</span>
-                      </div>
-                    </div>
-                  ))}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-800">Planificación del Proyecto</h4>
+            <div className="space-y-3">
+              <p className="text-gray-600">Elige tu rol en el equipo:</p>
+              {challengeData.tareas.map((tarea, index) => (
+                <div
+                  key={index}
+                  className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                    rolElegido === tarea
+                      ? "bg-blue-100 border-blue-400"
+                      : "bg-white border-gray-200 hover:border-blue-300"
+                  }`}
+                  onClick={() => elegirRol(tarea)}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">{tarea}</span>
+                    {rolElegido === tarea && <Badge className="bg-blue-500 text-white">Seleccionado</Badge>}
+                  </div>
                 </div>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-3">Equipos y Asignaciones:</h4>
-                <div className="space-y-3">
-                  {equipos.map((equipo) => (
-                    <Card key={equipo.id} className="border border-gray-200">
-                      <CardContent className="p-4">
-                        <h5 className="font-semibold text-sm mb-2">{equipo.nombre}</h5>
-                        <div className="space-y-1">
-                          {equipo.tareasAsignadas.map((tarea, index) => (
-                            <Badge key={index} variant="secondary" className="mr-1 text-xs">
-                              {tarea}
-                            </Badge>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="text-center">
-              <Button onClick={avanzarFase} className="bg-secondary text-white">
-                Iniciar Ejecución
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Ejecución */}
-        {fase === "ejecucion" && (
-          <div className="space-y-6">
-            <h3 className="font-semibold text-lg text-center">⚡ Ejecución del Proyecto</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {equipos.map((equipo) => (
-                <Card key={equipo.id} className="border-2 border-gray-200">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center justify-between">
-                      <span>{equipo.nombre}</span>
-                      <Badge variant={equipo.progreso === 100 ? "default" : "secondary"}>{equipo.progreso}%</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Progress value={equipo.progreso} className="h-2" />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => actualizarProgreso(equipo.id, equipo.progreso + 25)}
-                        disabled={equipo.progreso >= 100}
-                        className="flex-1 text-xs"
-                      >
-                        +25%
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => actualizarProgreso(equipo.id, 100)}
-                        disabled={equipo.progreso >= 100}
-                        variant="outline"
-                        className="flex-1 text-xs"
-                      >
-                        Completar
-                      </Button>
-                    </div>
-                    <div className="text-xs text-gray-600">
-                      {equipo.progreso === 100 ? (
-                        <div className="flex items-center gap-1 text-green-600">
-                          <CheckCircle className="h-3 w-3" />
-                          Completado
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1 text-orange-600">
-                          <AlertCircle className="h-3 w-3" />
-                          En progreso
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
               ))}
             </div>
-            {equipos.every((eq) => eq.progreso === 100) && (
-              <div className="text-center">
-                <Button onClick={avanzarFase} className="bg-green-600 text-white">
-                  Proceder a Presentación
-                </Button>
-              </div>
-            )}
           </div>
         )}
 
-        {/* Presentación */}
-        {fase === "presentacion" && (
-          <div className="space-y-6">
-            <h3 className="font-semibold text-lg text-center">🎤 Presentación de Soluciones</h3>
-            <div className="text-center mb-4">
-              <p className="text-gray-600">
-                Turno de: <Badge className="ml-2">{equipos[equipoActual]?.nombre}</Badge>
+        {/* Fase de Ejecución */}
+        {fase === "ejecucion" && (
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-800">Ejecución del Proyecto</h4>
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <p className="text-blue-800 text-sm">
+                <strong>Tu rol:</strong> {rolElegido}
               </p>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Presenta tu solución:</label>
-                <Textarea
-                  placeholder="Describe la solución de tu equipo al desafío..."
-                  value={solucionActual}
-                  onChange={(e) => setSolucionActual(e.target.value)}
-                  className="min-h-32 mt-2"
-                />
-              </div>
-
-              <Button
-                onClick={guardarSolucion}
-                disabled={!solucionActual.trim()}
-                className="w-full bg-primary text-black"
-              >
-                {equipoActual < equipos.length - 1 ? "Siguiente Equipo" : "Finalizar Presentaciones"}
-              </Button>
+            <div className="space-y-3">
+              <h5 className="font-medium text-gray-700">Tareas del equipo:</h5>
+              {challengeData.tareas.map((tarea, index) => (
+                <div
+                  key={index}
+                  className={`p-3 rounded-lg border-2 transition-all ${
+                    tareasCompletadas.includes(tarea)
+                      ? "bg-green-100 border-green-300"
+                      : "bg-white border-gray-200 hover:border-green-300 cursor-pointer"
+                  }`}
+                  onClick={() => completarTarea(tarea)}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">{tarea}</span>
+                    {tareasCompletadas.includes(tarea) ? (
+                      <Badge className="bg-green-500 text-white flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" />
+                        Completada
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">Pendiente</Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {/* Soluciones ya presentadas */}
-            {equipos.filter((eq) => eq.solucion).length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-semibold">Soluciones Presentadas:</h4>
-                {equipos
-                  .filter((eq) => eq.solucion)
-                  .map((equipo) => (
-                    <Card key={equipo.id} className="border border-gray-200">
-                      <CardContent className="p-4">
-                        <h5 className="font-semibold text-sm mb-2">{equipo.nombre}</h5>
-                        <p className="text-sm text-gray-700">{equipo.solucion}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </div>
-            )}
+            <div className="p-3 bg-green-50 rounded-lg">
+              <p className="text-sm text-green-800">
+                💡 <strong>Progreso:</strong> {tareasCompletadas.length}/{challengeData.tareas.length} tareas
+                completadas
+              </p>
+            </div>
           </div>
         )}
 
-        {/* Resultados */}
-        {fase === "resultados" && (
-          <div className="space-y-6 text-center">
-            <div className="p-6 bg-gradient-to-r from-blue-100 to-cyan-100 rounded-lg">
-              <Users className="h-12 w-12 mx-auto mb-4 text-blue-600" />
-              <h3 className="font-bold text-xl text-gray-800">¡Desafío Completado!</h3>
-              <p className="text-gray-700 mt-2">Excelente trabajo en equipo</p>
+        {/* Fase de Presentación */}
+        {fase === "presentacion" && (
+          <div className="text-center space-y-4">
+            <div className="p-6 bg-purple-50 rounded-lg">
+              <h4 className="font-semibold text-purple-800 mb-2">🎤 Presentación Final</h4>
+              <p className="text-purple-700">Tu equipo está presentando la solución al problema...</p>
+              <div className="mt-4 space-y-2">
+                <div className="text-lg font-semibold">Tareas completadas: {tareasCompletadas.length}</div>
+                <div className="text-lg font-semibold">Nivel de colaboración: {colaboracionScore}%</div>
+              </div>
             </div>
+          </div>
+        )}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">
-                  {equipos.reduce((acc, eq) => acc + eq.progreso, 0) / equipos.length}%
+        {/* Fase de Resultado */}
+        {fase === "resultado" && (
+          <div className="text-center space-y-4">
+            <div className="p-6 bg-green-50 rounded-lg">
+              <h4 className="font-semibold text-green-800 mb-4">🏆 Proyecto Completado</h4>
+              <div className="space-y-2">
+                <div className="text-lg">
+                  <strong>Tareas completadas:</strong> {tareasCompletadas.length}/{challengeData.tareas.length}
                 </div>
-                <div className="text-xs text-gray-600">Progreso Promedio</div>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
-                  {equipos.filter((eq) => eq.solucion.length > 0).length}
+                <div className="text-lg">
+                  <strong>Colaboración:</strong>{" "}
+                  {colaboracionScore >= 100 ? "Excelente" : colaboracionScore >= 60 ? "Buena" : "Satisfactoria"}
                 </div>
-                <div className="text-xs text-gray-600">Soluciones</div>
-              </div>
-              <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                <div className="text-2xl font-bold text-yellow-600">{equipos.length}</div>
-                <div className="text-xs text-gray-600">Equipos</div>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
-                  +
-                  {Math.round(
-                    (equipos.reduce((acc, eq) => acc + eq.progreso, 0) / equipos.length) * 0.5 +
-                      equipos.filter((eq) => eq.solucion.length > 0).length * 20,
-                  )}
+                <div className="text-lg">
+                  <strong>Resultado:</strong> ¡Trabajo en equipo exitoso!
                 </div>
-                <div className="text-xs text-gray-600">Puntos</div>
               </div>
+              <Button onClick={finalizarDesafio} className="mt-4 bg-green-600 text-white">
+                Reclamar Recompensa
+              </Button>
             </div>
           </div>
         )}

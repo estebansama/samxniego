@@ -1,70 +1,99 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { adminAuth, adminDb } from "@/lib/firebase-admin"
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const creadorId = searchParams.get("creadorId")
     const materia = searchParams.get("materia")
-    const activo = searchParams.get("activo")
+    const tipo = searchParams.get("tipo")
 
-    let query = adminDb.collection("minijuegos").orderBy("fechaCreacion", "desc")
+    // Simular minijuegos disponibles
+    let minijuegos = [
+      {
+        id: "1",
+        titulo: "Trivia de Historia",
+        descripcion: "Preguntas sobre historia mundial",
+        tipo: "trivia",
+        materia: "Historia",
+        dificultad: "Medio",
+        puntos: 50,
+        tiempoEstimado: "10 min",
+        disponible: true,
+      },
+      {
+        id: "2",
+        titulo: "Memoria Matemática",
+        descripcion: "Ejercicios de memoria con números",
+        tipo: "memoria",
+        materia: "Matemáticas",
+        dificultad: "Fácil",
+        puntos: 75,
+        tiempoEstimado: "8 min",
+        disponible: true,
+      },
+      {
+        id: "3",
+        titulo: "Análisis Literario",
+        descripcion: "Comprensión de textos literarios",
+        tipo: "analisis",
+        materia: "Literatura",
+        dificultad: "Difícil",
+        puntos: 100,
+        tiempoEstimado: "15 min",
+        disponible: true,
+      },
+      {
+        id: "4",
+        titulo: "Experimentos Virtuales",
+        descripcion: "Simulaciones de laboratorio",
+        tipo: "simulacion",
+        materia: "Ciencias",
+        dificultad: "Medio",
+        puntos: 80,
+        tiempoEstimado: "12 min",
+        disponible: true,
+      },
+    ]
 
-    if (creadorId) {
-      query = query.where("creadorId", "==", creadorId) as any
-    }
-
+    // Filtrar por materia si se especifica
     if (materia) {
-      query = query.where("materia", "==", materia) as any
+      minijuegos = minijuegos.filter((juego) => juego.materia === materia)
     }
 
-    if (activo !== null) {
-      query = query.where("activo", "==", activo === "true") as any
+    // Filtrar por tipo si se especifica
+    if (tipo) {
+      minijuegos = minijuegos.filter((juego) => juego.tipo === tipo)
     }
-
-    const snapshot = await query.get()
-    const minijuegos = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }))
 
     return NextResponse.json({
       success: true,
       minijuegos,
+      total: minijuegos.length,
     })
   } catch (error) {
     console.error("Error obteniendo minijuegos:", error)
-    return NextResponse.json({ success: false, error: "Error obteniendo minijuegos" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Error al obtener minijuegos" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization")
-    if (!authHeader) {
-      return NextResponse.json({ success: false, error: "Token requerido" }, { status: 401 })
-    }
-
-    const idToken = authHeader.replace("Bearer ", "")
-    const decodedToken = await adminAuth.verifyIdToken(idToken)
-    const uid = decodedToken.uid
-
     const minijuegoData = await request.json()
 
-    const docRef = await adminDb.collection("minijuegos").add({
+    // Simular creación de minijuego
+    const nuevoMinijuego = {
+      id: Math.random().toString(36).substr(2, 9),
       ...minijuegoData,
-      creadorId: uid,
-      fechaCreacion: new Date(),
+      fechaCreacion: new Date().toISOString(),
       activo: true,
-    })
+    }
 
     return NextResponse.json({
       success: true,
-      id: docRef.id,
+      minijuego: nuevoMinijuego,
       message: "Minijuego creado exitosamente",
     })
   } catch (error) {
     console.error("Error creando minijuego:", error)
-    return NextResponse.json({ success: false, error: "Error creando minijuego" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Error al crear minijuego" }, { status: 500 })
   }
 }

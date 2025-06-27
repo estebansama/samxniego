@@ -4,112 +4,50 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
-import { MessageSquare, Clock, Award, ThumbsUp, ThumbsDown } from "lucide-react"
+import { MessageSquare, Clock, Users, Trophy, X } from "lucide-react"
 
 interface DebateSessionProps {
   debateData: {
     pregunta: string
     argumentos: string[]
     tiempoTotal: number
-    equiposRequeridos?: number
+    cargando?: boolean
   }
-  onComplete: (resultado: any) => void
+  onComplete: (resultado: { puntos: number; ganador: string }) => void
   onClose: () => void
 }
 
 export function DebateSession({ debateData, onComplete, onClose }: DebateSessionProps) {
-  const [fase, setFase] = useState<"preparacion" | "argumentos" | "contraargumentos" | "votacion" | "resultados">(
-    "preparacion",
-  )
   const [tiempoRestante, setTiempoRestante] = useState(debateData.tiempoTotal || 300)
-  const [equipos, setEquipos] = useState<
-    Array<{
-      id: number
-      nombre: string
-      posicion: "favor" | "contra"
-      argumentos: string[]
-      votos: number
-    }>
-  >([])
-  const [argumentoActual, setArgumentoActual] = useState("")
-  const [equipoActivo, setEquipoActivo] = useState(0)
-  const [votacionCompleta, setVotacionCompleta] = useState(false)
+  const [fase, setFase] = useState<"preparacion" | "debate" | "votacion" | "resultado">("preparacion")
+  const [posicionElegida, setPosicionElegida] = useState<"favor" | "contra" | null>(null)
+  const [argumentosUsados, setArgumentosUsados] = useState<string[]>([])
+  const [votosRecibidos, setVotosRecibidos] = useState(0)
 
   useEffect(() => {
-    // Inicializar equipos
-    setEquipos([
-      {
-        id: 1,
-        nombre: "Equipo A Favor",
-        posicion: "favor",
-        argumentos: [],
-        votos: 0,
-      },
-      {
-        id: 2,
-        nombre: "Equipo En Contra",
-        posicion: "contra",
-        argumentos: [],
-        votos: 0,
-      },
-    ])
-  }, [])
+    if (debateData.cargando) return
 
-  useEffect(() => {
     const timer = setInterval(() => {
       setTiempoRestante((prev) => {
         if (prev <= 1) {
-          avanzarFase()
-          return debateData.tiempoTotal || 300
+          if (fase === "preparacion") {
+            setFase("debate")
+            return 180 // 3 minutos para debate
+          } else if (fase === "debate") {
+            setFase("votacion")
+            return 60 // 1 minuto para votación
+          } else if (fase === "votacion") {
+            setFase("resultado")
+            return 0
+          }
         }
         return prev - 1
       })
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [fase])
-
-  const avanzarFase = () => {
-    const fases = ["preparacion", "argumentos", "contraargumentos", "votacion", "resultados"]
-    const currentIndex = fases.indexOf(fase)
-    if (currentIndex < fases.length - 1) {
-      setFase(fases[currentIndex + 1] as any)
-      setTiempoRestante(debateData.tiempoTotal || 300)
-    }
-  }
-
-  const agregarArgumento = () => {
-    if (!argumentoActual.trim()) return
-
-    const nuevosEquipos = [...equipos]
-    nuevosEquipos[equipoActivo].argumentos.push(argumentoActual)
-    setEquipos(nuevosEquipos)
-    setArgumentoActual("")
-
-    // Cambiar al siguiente equipo
-    setEquipoActivo((prev) => (prev + 1) % equipos.length)
-  }
-
-  const votar = (equipoId: number) => {
-    const nuevosEquipos = equipos.map((equipo) =>
-      equipo.id === equipoId ? { ...equipo, votos: equipo.votos + 1 } : equipo,
-    )
-    setEquipos(nuevosEquipos)
-    setVotacionCompleta(true)
-
-    setTimeout(() => {
-      setFase("resultados")
-      const ganador = nuevosEquipos.reduce((a, b) => (a.votos > b.votos ? a : b))
-      onComplete({
-        ganador: ganador.nombre,
-        argumentosTotal: nuevosEquipos.reduce((acc, eq) => acc + eq.argumentos.length, 0),
-        participacion: 100,
-        puntos: 50 + ganador.argumentos.length * 10,
-      })
-    }, 2000)
-  }
+  }, [fase, debateData.cargando])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -117,192 +55,200 @@ export function DebateSession({ debateData, onComplete, onClose }: DebateSession
     return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
-  return (
-    <Card className="w-full max-w-4xl mx-auto shadow-2xl border-0 bg-gradient-to-r from-purple-50 to-pink-50">
-      <CardHeader className="text-center">
-        <div className="flex items-center justify-between mb-4">
-          <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">🎭 SESIÓN DE DEBATE</Badge>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-gray-600" />
-              <span className="font-mono text-lg">{formatTime(tiempoRestante)}</span>
-            </div>
-            <Button onClick={onClose} variant="outline" size="sm">
-              Cerrar
-            </Button>
-          </div>
-        </div>
+  const elegirPosicion = (posicion: "favor" | "contra") => {
+    setPosicionElegida(posicion)
+    setFase("debate")
+    setTiempoRestante(180)
+  }
 
-        <CardTitle className="text-xl">{debateData.pregunta}</CardTitle>
-        <CardDescription>
-          <Badge variant="outline" className="mr-2">
-            Fase: {fase}
-          </Badge>
-          Argumenta tu posición y escucha otros puntos de vista
-        </CardDescription>
+  const usarArgumento = (argumento: string) => {
+    if (!argumentosUsados.includes(argumento)) {
+      setArgumentosUsados([...argumentosUsados, argumento])
+      // Simular recepción de votos
+      setVotosRecibidos((prev) => prev + Math.floor(Math.random() * 3) + 1)
+    }
+  }
+
+  const finalizarDebate = () => {
+    const puntosBase = 50
+    const bonusPorArgumentos = argumentosUsados.length * 15
+    const bonusPorVotos = votosRecibidos * 5
+    const puntosTotal = puntosBase + bonusPorArgumentos + bonusPorVotos
+
+    const resultado = {
+      puntos: puntosTotal,
+      ganador: votosRecibidos >= 5 ? "Ganaste el debate" : "Participación exitosa",
+    }
+
+    onComplete(resultado)
+  }
+
+  if (debateData.cargando) {
+    return (
+      <Card className="shadow-2xl border-0 bg-gradient-to-r from-purple-100 to-blue-100">
+        <CardContent className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-purple-800">Preparando sesión de debate...</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="shadow-2xl border-0 bg-gradient-to-r from-purple-50 to-blue-50 animate-bounce-in">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-500 rounded-lg">
+              <MessageSquare className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">Sesión de Debate</CardTitle>
+              <CardDescription className="flex items-center gap-4 mt-2">
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formatTime(tiempoRestante)}
+                </Badge>
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  Fase: {fase}
+                </Badge>
+                {votosRecibidos > 0 && (
+                  <Badge className="bg-green-500 text-white flex items-center gap-1">
+                    <Trophy className="h-3 w-3" />
+                    {votosRecibidos} votos
+                  </Badge>
+                )}
+              </CardDescription>
+            </div>
+          </div>
+          <Button onClick={onClose} variant="outline" size="sm">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Progreso de la sesión */}
+        {/* Pregunta del Debate */}
+        <div className="p-4 bg-white rounded-lg border-l-4 border-purple-500">
+          <h3 className="font-semibold text-purple-800 mb-2">Tema de Debate</h3>
+          <p className="text-gray-700">{debateData.pregunta}</p>
+        </div>
+
+        {/* Progreso del tiempo */}
         <div className="space-y-2">
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>Progreso del Debate</span>
-            <span>
-              {["preparacion", "argumentos", "contraargumentos", "votacion", "resultados"].indexOf(fase) + 1}/5
-            </span>
+          <div className="flex justify-between text-sm">
+            <span>Tiempo restante</span>
+            <span className="font-mono">{formatTime(tiempoRestante)}</span>
           </div>
           <Progress
-            value={(["preparacion", "argumentos", "contraargumentos", "votacion", "resultados"].indexOf(fase) + 1) * 20}
+            value={((debateData.tiempoTotal - tiempoRestante) / debateData.tiempoTotal) * 100}
             className="h-2"
           />
         </div>
 
-        {/* Argumentos base */}
+        {/* Fase de Preparación */}
         {fase === "preparacion" && (
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">📋 Argumentos Base para Considerar</h3>
+            <h4 className="font-semibold text-gray-800">Elige tu posición:</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {debateData.argumentos?.map((argumento, index) => (
-                <div key={index} className="p-4 bg-white rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-700">{argumento}</p>
-                </div>
-              ))}
-            </div>
-            <div className="text-center">
-              <Button onClick={avanzarFase} className="bg-primary text-black">
-                Comenzar Debate
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Fase de argumentos */}
-        {(fase === "argumentos" || fase === "contraargumentos") && (
-          <div className="space-y-6">
-            <div className="text-center">
-              <h3 className="font-semibold text-lg">
-                {fase === "argumentos" ? "💬 Presenta tus Argumentos" : "🔄 Contraargumentos"}
-              </h3>
-              <p className="text-sm text-gray-600">
-                Turno del: <Badge className="ml-2">{equipos[equipoActivo]?.nombre}</Badge>
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <Textarea
-                placeholder={`Escribe tu ${fase === "argumentos" ? "argumento" : "contraargumento"} aquí...`}
-                value={argumentoActual}
-                onChange={(e) => setArgumentoActual(e.target.value)}
-                className="min-h-24"
-              />
               <Button
-                onClick={agregarArgumento}
-                disabled={!argumentoActual.trim()}
-                className="w-full bg-secondary text-white"
+                onClick={() => elegirPosicion("favor")}
+                className="h-auto p-4 bg-green-100 hover:bg-green-200 text-green-800 border-2 border-green-300"
               >
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Enviar {fase === "argumentos" ? "Argumento" : "Contraargumento"}
+                <div className="text-left">
+                  <div className="font-semibold mb-2">✅ A Favor</div>
+                  <div className="text-sm">{debateData.argumentos[0]}</div>
+                </div>
+              </Button>
+              <Button
+                onClick={() => elegirPosicion("contra")}
+                className="h-auto p-4 bg-red-100 hover:bg-red-200 text-red-800 border-2 border-red-300"
+              >
+                <div className="text-left">
+                  <div className="font-semibold mb-2">❌ En Contra</div>
+                  <div className="text-sm">{debateData.argumentos[1]}</div>
+                </div>
               </Button>
             </div>
-
-            {/* Argumentos de equipos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {equipos.map((equipo) => (
-                <Card
-                  key={equipo.id}
-                  className={`border-2 ${equipo.posicion === "favor" ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
-                >
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      {equipo.posicion === "favor" ? (
-                        <ThumbsUp className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <ThumbsDown className="h-4 w-4 text-red-600" />
-                      )}
-                      {equipo.nombre}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {equipo.argumentos.map((arg, index) => (
-                      <div key={index} className="p-2 bg-white rounded text-xs">
-                        {arg}
-                      </div>
-                    ))}
-                    {equipo.argumentos.length === 0 && (
-                      <p className="text-xs text-gray-500 italic">Esperando argumentos...</p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           </div>
         )}
 
-        {/* Fase de votación */}
-        {fase === "votacion" && !votacionCompleta && (
-          <div className="space-y-6 text-center">
-            <h3 className="font-semibold text-lg">🗳️ Vota por el Mejor Argumento</h3>
-            <p className="text-gray-600">¿Qué equipo presentó los argumentos más convincentes?</p>
+        {/* Fase de Debate */}
+        {fase === "debate" && posicionElegida && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Badge className={posicionElegida === "favor" ? "bg-green-500" : "bg-red-500"}>
+                {posicionElegida === "favor" ? "Defendiendo: A Favor" : "Defendiendo: En Contra"}
+              </Badge>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {equipos.map((equipo) => (
-                <Button
-                  key={equipo.id}
-                  onClick={() => votar(equipo.id)}
-                  className={`h-auto p-6 ${
-                    equipo.posicion === "favor"
-                      ? "bg-green-500 hover:bg-green-600 text-white"
-                      : "bg-red-500 hover:bg-red-600 text-white"
+            <div className="space-y-3">
+              <h4 className="font-semibold text-gray-800">Argumentos disponibles:</h4>
+              {debateData.argumentos.map((argumento, index) => (
+                <div
+                  key={index}
+                  className={`p-3 rounded-lg border-2 transition-all ${
+                    argumentosUsados.includes(argumento)
+                      ? "bg-gray-100 border-gray-300 opacity-60"
+                      : "bg-white border-purple-200 hover:border-purple-400 cursor-pointer"
                   }`}
+                  onClick={() => usarArgumento(argumento)}
                 >
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      {equipo.posicion === "favor" ? (
-                        <ThumbsUp className="h-5 w-5" />
-                      ) : (
-                        <ThumbsDown className="h-5 w-5" />
-                      )}
-                      <span className="font-semibold">{equipo.nombre}</span>
-                    </div>
-                    <p className="text-sm opacity-90">{equipo.argumentos.length} argumentos presentados</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">{argumento}</span>
+                    {argumentosUsados.includes(argumento) ? (
+                      <Badge variant="outline">Usado ✓</Badge>
+                    ) : (
+                      <Badge className="bg-purple-500 text-white">Usar</Badge>
+                    )}
                   </div>
-                </Button>
+                </div>
               ))}
             </div>
-          </div>
-        )}
 
-        {/* Resultados */}
-        {fase === "resultados" && (
-          <div className="space-y-6 text-center">
-            <div className="p-6 bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg">
-              <Award className="h-12 w-12 mx-auto mb-4 text-yellow-600" />
-              <h3 className="font-bold text-xl text-gray-800">¡Debate Completado!</h3>
-              <p className="text-gray-700 mt-2">
-                Ganador:{" "}
-                <Badge className="ml-2 bg-yellow-500 text-white">
-                  {equipos.reduce((a, b) => (a.votos > b.votos ? a : b)).nombre}
-                </Badge>
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                💡 <strong>Tip:</strong> Usa diferentes argumentos para ganar más votos de la audiencia
               </p>
             </div>
+          </div>
+        )}
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">
-                  {equipos.reduce((acc, eq) => acc + eq.argumentos.length, 0)}
+        {/* Fase de Votación */}
+        {fase === "votacion" && (
+          <div className="text-center space-y-4">
+            <div className="p-6 bg-yellow-50 rounded-lg">
+              <h4 className="font-semibold text-yellow-800 mb-2">🗳️ Votación en Curso</h4>
+              <p className="text-yellow-700">La audiencia está votando por los mejores argumentos...</p>
+              <div className="mt-4">
+                <div className="text-2xl font-bold text-yellow-800">{votosRecibidos}</div>
+                <div className="text-sm text-yellow-600">Votos recibidos</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Fase de Resultado */}
+        {fase === "resultado" && (
+          <div className="text-center space-y-4">
+            <div className="p-6 bg-green-50 rounded-lg">
+              <h4 className="font-semibold text-green-800 mb-4">🏆 Debate Finalizado</h4>
+              <div className="space-y-2">
+                <div className="text-lg">
+                  <strong>Argumentos usados:</strong> {argumentosUsados.length}
                 </div>
-                <div className="text-xs text-gray-600">Argumentos Totales</div>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">100%</div>
-                <div className="text-xs text-gray-600">Participación</div>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
-                  +{50 + equipos.reduce((a, b) => (a.votos > b.votos ? a : b)).argumentos.length * 10}
+                <div className="text-lg">
+                  <strong>Votos recibidos:</strong> {votosRecibidos}
                 </div>
-                <div className="text-xs text-gray-600">Puntos Ganados</div>
+                <div className="text-lg">
+                  <strong>Resultado:</strong>{" "}
+                  {votosRecibidos >= 5 ? "¡Ganaste el debate!" : "¡Excelente participación!"}
+                </div>
               </div>
+              <Button onClick={finalizarDebate} className="mt-4 bg-green-600 text-white">
+                Reclamar Recompensa
+              </Button>
             </div>
           </div>
         )}

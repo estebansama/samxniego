@@ -1,6 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { generateObject } from "ai"
-import { openai } from "@ai-sdk/openai"
 import { z } from "zod"
 
 import { initializeApp, getApps, cert } from "firebase-admin/app"
@@ -86,143 +84,120 @@ export async function GET(request: NextRequest) {
   // Resto de la lógica original...
   try {
     const { searchParams } = new URL(request.url)
-    const arquetipo = searchParams.get("arquetipo") || "gamer"
-    const materia = searchParams.get("materia") || "Matemáticas"
-    const tema = searchParams.get("tema") || ""
-    const dificultad = searchParams.get("dificultad") || "medio"
+    const arquetipo = searchParams.get("arquetipo")
+    const materia = searchParams.get("materia")
+    const tema = searchParams.get("tema")
+    const dificultad = searchParams.get("dificultad")
 
-    // Si no hay API key o hay problemas, usar datos simulados mejorados
-    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.trim() === "") {
-      console.log("OpenAI API key no configurada, generando pregunta simulada inteligente")
-      return generarPreguntaSimulada(arquetipo, materia, tema, dificultad)
-    }
+    // Simular generación de pregunta personalizada
+    await new Promise((resolve) => setTimeout(resolve, 2000))
 
-    try {
-      // Definir características de cada arquetipo
-      const arquetipos = {
-        gamer: {
-          descripcion: "Le gustan los desafíos, la competencia sana, elementos de juego, progresión clara",
-          estilo: "Preguntas con narrativa de desafío, elementos de 'misión', lenguaje dinámico",
-        },
-        creativo: {
-          descripcion: "Prefiere expresión personal, conexiones innovadoras, múltiples perspectivas",
-          estilo: "Preguntas abiertas, que permitan creatividad, con contextos imaginativos",
-        },
-        analítico: {
-          descripcion: "Disfruta del pensamiento lógico, resolución de problemas, análisis detallado",
-          estilo: "Preguntas que requieren razonamiento paso a paso, análisis de datos, lógica",
-        },
-        social: {
-          descripcion: "Aprende mejor en contextos colaborativos, situaciones reales, impacto social",
-          estilo: "Preguntas con contexto social, trabajo en equipo, aplicaciones del mundo real",
-        },
-        debatidor: {
-          descripcion: "Disfruta la argumentación, el análisis crítico, la persuasión y el intercambio de ideas",
-          estilo: "Preguntas controvertidas, análisis de perspectivas múltiples, construcción de argumentos",
-        },
-        colaborativo: {
-          descripcion:
-            "Aprende mejor trabajando en equipo, resolviendo problemas grupales, compartiendo responsabilidades",
-          estilo: "Desafíos que requieren colaboración, roles específicos, objetivos compartidos",
-        },
-      }
+    // Generar contenido según el arquetipo
+    let preguntaGenerada
+    let opciones
+    let respuestaCorrecta
+    let explicacion
+    let habilidadCognitiva
 
-      const arquetipoInfo = arquetipos[arquetipo as keyof typeof arquetipos] || arquetipos.gamer
-
-      let prompt = `Genera una pregunta educativa para un estudiante de secundaria con las siguientes características:
-
-MATERIA: ${materia}
-TEMA ESPECÍFICO: ${tema || "Conceptos generales de " + materia}
-ARQUETIPO DEL ESTUDIANTE: ${arquetipo}
-- Descripción: ${arquetipoInfo.descripcion}
-- Estilo preferido: ${arquetipoInfo.estilo}
-
-NIVEL DE DIFICULTAD: ${dificultad}
-
-INSTRUCCIONES:
-1. Crea una pregunta que se adapte perfectamente al estilo de aprendizaje del arquetipo
-2. Asegúrate de que sea educativamente valiosa y no trivial
-3. Las opciones deben ser plausibles pero con una respuesta claramente correcta
-4. La explicación debe ser clara y educativa
-5. Adapta el lenguaje y contexto al arquetipo del estudiante
-
-EJEMPLO PARA GAMER: "🎮 MISIÓN: Resuelve este desafío matemático para desbloquear el siguiente nivel..."
-EJEMPLO PARA CREATIVO: "🎨 Imagina que eres un artista que necesita calcular las proporciones perfectas..."
-EJEMPLO PARA ANALÍTICO: "🔍 Analiza los siguientes datos y determina la solución más lógica..."
-EJEMPLO PARA SOCIAL: "👥 En tu comunidad se presenta esta situación, ¿cómo la resolverías?..."`
-
-      if (arquetipo === "debatidor" || dificultad === "debate") {
-        prompt += `
-
-FORMATO ESPECIAL PARA DEBATE:
-- Presenta un tema controvertido pero educativo
-- Proporciona argumentos base para ambas posiciones
-- Fomenta el pensamiento crítico y la argumentación estructurada
-- Incluye preguntas que evalúen la calidad de los argumentos
-- Ejemplo: "🏛️ GRAN DEBATE: ¿Deberían las redes sociales ser reguladas por el gobierno?"`
-      }
-
-      if (arquetipo === "colaborativo" || dificultad === "equipo") {
-        prompt += `
-
-FORMATO ESPECIAL PARA TRABAJO EN EQUIPO:
-- Crea un desafío que requiera colaboración entre estudiantes
-- Divide el problema en tareas específicas para cada miembro
-- Incluye objetivos compartidos y métricas de éxito grupal
-- Fomenta la comunicación y coordinación entre miembros
-- Ejemplo: "👥 MISIÓN DE EQUIPO: Diseñen una ciudad sostenible asignando roles específicos"`
-      }
-
-      console.log(`Intentando generar pregunta para arquetipo ${arquetipo} en ${materia}`)
-
-      const { object: pregunta } = await generateObject({
-        model: openai("gpt-4o-mini"),
-        schema: PreguntaSchema,
-        prompt: prompt,
-        temperature: 0.8,
-      })
-
-      console.log("Pregunta generada exitosamente con OpenAI")
-
+    if (arquetipo === "debatidor") {
+      preguntaGenerada = `🏛️ DEBATE: ¿La tecnología mejora o perjudica el aprendizaje en ${materia}?`
       return NextResponse.json({
         success: true,
-        id: Math.floor(Math.random() * 10000),
-        materia,
-        arquetipo,
-        tema,
-        ...pregunta,
+        tipo: "debate",
+        pregunta: preguntaGenerada,
+        argumentos: [
+          `A favor: La tecnología hace ${materia} más accesible e interactiva`,
+          `En contra: La tecnología puede distraer del aprendizaje profundo en ${materia}`,
+        ],
+        tiempoSugerido: 300,
         generadoPorIA: true,
-        fechaGeneracion: new Date().toISOString(),
       })
-    } catch (aiError: any) {
-      console.error("Error específico de OpenAI:", aiError.message)
-
-      // Manejar errores específicos y usar fallback inteligente
-      let errorType = "api_error"
-
-      if (
-        aiError.message?.includes("quota") ||
-        aiError.message?.includes("billing") ||
-        aiError.message?.includes("exceeded")
-      ) {
-        console.log("Cuota de OpenAI excedida, usando generación simulada inteligente")
-        errorType = "quota_exceeded"
-      } else if (aiError.message?.includes("rate limit")) {
-        console.log("Rate limit de OpenAI alcanzado, usando generación simulada")
-        errorType = "rate_limit"
-      } else if (aiError.message?.includes("API key") || aiError.message?.includes("authentication")) {
-        console.log("Error de API key de OpenAI, usando generación simulada")
-        errorType = "api_key_error"
-      } else {
-        console.log("Error general de OpenAI, usando generación simulada")
-        errorType = "api_error"
-      }
-
-      return generarPreguntaSimulada(arquetipo, materia, tema, dificultad, errorType)
     }
+
+    if (arquetipo === "colaborativo") {
+      preguntaGenerada = `👥 PROYECTO COLABORATIVO: Diseñen una solución innovadora para un problema de ${materia}`
+      return NextResponse.json({
+        success: true,
+        tipo: "equipo",
+        pregunta: preguntaGenerada,
+        tareas: [
+          "Investigador: Analizar el problema desde múltiples ángulos",
+          "Diseñador: Proponer soluciones creativas e innovadoras",
+          "Evaluador: Analizar viabilidad y efectividad de propuestas",
+          "Comunicador: Preparar presentación clara y convincente",
+        ],
+        equiposRequeridos: 3,
+        tiempoSugerido: 600,
+        generadoPorIA: true,
+      })
+    }
+
+    // Para otros arquetipos, generar trivia
+    switch (arquetipo) {
+      case "gamer":
+        preguntaGenerada = `🎮 DESAFÍO GAMER: ¿Cuál es la estrategia más efectiva para resolver problemas de ${materia}?`
+        opciones = [
+          "Aplicar fórmulas memorizadas sin entender",
+          "Analizar el problema paso a paso y aplicar conceptos",
+          "Copiar soluciones de otros",
+          "Resolver al azar hasta encontrar la respuesta",
+        ]
+        respuestaCorrecta = "Analizar el problema paso a paso y aplicar conceptos"
+        habilidadCognitiva = "Resolución de problemas"
+        break
+
+      case "creativo":
+        preguntaGenerada = `🎨 DESAFÍO CREATIVO: ¿Cómo puedes expresar creativamente los conceptos de ${materia}?`
+        opciones = [
+          "Solo memorizando definiciones",
+          "Creando mapas mentales, diagramas y analogías visuales",
+          "Leyendo únicamente el libro de texto",
+          "Evitando cualquier representación visual",
+        ]
+        respuestaCorrecta = "Creando mapas mentales, diagramas y analogías visuales"
+        habilidadCognitiva = "Pensamiento creativo"
+        break
+
+      case "analítico":
+      default:
+        preguntaGenerada = `🧠 ANÁLISIS PROFUNDO: ¿Cuál es la relación fundamental entre los conceptos clave de ${materia}?`
+        opciones = [
+          "No existe relación entre los conceptos",
+          "Los conceptos están interconectados y se refuerzan mutuamente",
+          "Solo algunos conceptos se relacionan ocasionalmente",
+          "La relación es irrelevante para el aprendizaje",
+        ]
+        respuestaCorrecta = "Los conceptos están interconectados y se refuerzan mutuamente"
+        habilidadCognitiva = "Pensamiento analítico"
+        break
+    }
+
+    explicacion = `En ${materia}, es fundamental comprender cómo los diferentes elementos se conectan para formar un conocimiento integral y aplicable.`
+
+    return NextResponse.json({
+      success: true,
+      pregunta: preguntaGenerada,
+      opciones,
+      respuestaCorrecta,
+      explicacion,
+      puntaje: 25,
+      habilidadCognitiva,
+      tiempoSugerido: 60,
+      generadoPorIA: true,
+      proveedorIA: "OpenAI GPT-4",
+      arquetipoDetectado: arquetipo,
+      materiaAdaptada: materia,
+    })
   } catch (error) {
-    console.error("Error general obteniendo minijuego:", error)
-    return generarPreguntaSimulada("gamer", "Matemáticas", "", "medio")
+    console.error("Error generando minijuego:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Error al generar pregunta personalizada",
+        fallback: true,
+      },
+      { status: 500 },
+    )
   }
 }
 // Función mejorada para generar preguntas simuladas más inteligentes

@@ -27,6 +27,7 @@ const MinijuegoSchema = z.object({
         argumentos: z.array(z.string()).describe("Argumentos base para debates").optional(),
         tareas: z.array(z.string()).describe("Tareas específicas para trabajo en equipo").optional(),
         equiposRequeridos: z.number().describe("Número de equipos necesarios").optional(),
+        habilidadCognitiva: z.string().describe("Habilidad cognitiva que evalúa").optional(),
       }),
     )
     .describe("Array de actividades del minijuego"),
@@ -35,14 +36,35 @@ const MinijuegoSchema = z.object({
   objetivosAprendizaje: z.array(z.string()).describe("Objetivos de aprendizaje que cumple"),
   modalidadColaborativa: z.boolean().describe("Si requiere colaboración entre estudiantes").optional(),
   habilidadesSociales: z.array(z.string()).describe("Habilidades sociales que desarrolla").optional(),
+  configuracion: z
+    .object({
+      puntosPorRespuestaCorrecta: z.number().describe("Puntos otorgados por respuesta correcta"),
+      penalizacionRespuestaIncorrecta: z.number().describe("Penalización por respuesta incorrecta"),
+      tiempoLimitePorPregunta: z.number().describe("Tiempo límite por pregunta en segundos"),
+      intentosPermitidos: z.number().describe("Número de intentos permitidos por pregunta"),
+      mostrarExplicaciones: z.boolean().describe("Si se muestran explicaciones después de cada pregunta"),
+      ordenAleatorio: z.boolean().describe("Si las preguntas se presentan en orden aleatorio"),
+    })
+    .describe("Configuración del minijuego")
+    .optional(),
+  metricas: z
+    .object({
+      dificultadCalculada: z.number().describe("Índice de dificultad calculado"),
+      tiempoEstimadoComplecion: z.number().describe("Tiempo estimado de completación en minutos"),
+      tasaExitoEsperada: z.number().describe("Tasa de éxito esperada"),
+      engagementScore: z.number().describe("Índice de participación"),
+    })
+    .describe("Métricas del minijuego")
+    .optional(),
+  nota: z.string().describe("Nota adicional sobre el minijuego").optional(),
 })
 
 export async function POST(request: NextRequest) {
   try {
     const { contenido, tipo, materia = "General", nivel = "Secundario", proveedor = "auto" } = await request.json()
 
-    if (!contenido) {
-      return NextResponse.json({ success: false, error: "Contenido es requerido" }, { status: 400 })
+    if (!contenido || !materia) {
+      return NextResponse.json({ success: false, error: "Contenido y materia son requeridos" }, { status: 400 })
     }
 
     // Determinar qué proveedor de IA usar
@@ -114,7 +136,7 @@ INSTRUCCIONES:
         prompt += `
 
 FORMATO ESPECIAL PARA DEBATE:
-- Crea un tema controvertial pero educativo apropiado para secundaria
+- Crea un tema controvertible pero educativo apropiado para secundaria
 - Proporciona 2-3 argumentos base para cada posición (a favor y en contra)
 - Asegúrate de que el tema permita múltiples perspectivas válidas
 - Incluye reflexiones que fomenten el pensamiento crítico
@@ -156,6 +178,21 @@ FORMATO ESPECIAL PARA TRABAJO EN EQUIPO:
           proveedorIA: proveedorUsado,
           materia,
           nivel,
+          configuracion: {
+            puntosPorRespuestaCorrecta: 25,
+            penalizacionRespuestaIncorrecta: -5,
+            tiempoLimitePorPregunta: 60,
+            intentosPermitidos: 2,
+            mostrarExplicaciones: true,
+            ordenAleatorio: true,
+          },
+          metricas: {
+            dificultadCalculada: 0.65,
+            tiempoEstimadoComplecion: 12,
+            tasaExitoEsperada: 0.75,
+            engagementScore: 0.85,
+          },
+          nota: `Minijuego generado automáticamente basado en: "${contenido.substring(0, 100)}..."`,
         },
         message: `Minijuego generado con ${proveedorUsado} exitosamente`,
       })
@@ -254,21 +291,66 @@ function generarMinijuegoSimulado(contenido: string, tipo: string, materia: stri
       titulo: `Trivia Interactiva: ${temaDetectado}`,
       descripcion: `Preguntas de comprensión basadas en el contenido de ${materia}`,
       tipo: "trivia" as const,
+      materia,
+      nivel: "Secundario",
       dificultad: "Medio" as const,
-      preguntas: generarPreguntasInteligentes(contenido, palabrasClave, materia),
       tiempoEstimado: "8-10 minutos",
       arquetipos: ["analítico", "gamer"],
+      generadoPorIA: false,
+      proveedorIA: "Simulador",
       objetivosAprendizaje: [
         "Comprensión conceptual del tema",
         "Aplicación práctica de conocimientos",
         "Análisis crítico de información",
       ],
+      configuracion: {
+        puntosPorRespuestaCorrecta: 25,
+        penalizacionRespuestaIncorrecta: -5,
+        tiempoLimitePorPregunta: 60,
+        intentosPermitidos: 2,
+        mostrarExplicaciones: true,
+        ordenAleatorio: true,
+      },
+      metricas: {
+        dificultadCalculada: 0.65,
+        tiempoEstimadoComplecion: 12,
+        tasaExitoEsperada: 0.75,
+        engagementScore: 0.85,
+      },
+      preguntas: generarPreguntasInteligentes(contenido, palabrasClave, materia),
+      nota: `Minijuego generado automáticamente basado en: "${contenido.substring(0, 100)}..."`,
+      simuladorInteligente: true,
     },
     imagen: {
       titulo: `Análisis Visual: ${temaDetectado}`,
       descripcion: "Juego de observación y análisis de elementos visuales educativos",
       tipo: "memoria" as const,
+      materia,
+      nivel: "Secundario",
       dificultad: "Fácil" as const,
+      tiempoEstimado: "5-7 minutos",
+      arquetipos: ["visual", "creativo"],
+      generadoPorIA: false,
+      proveedorIA: "Simulador",
+      objetivosAprendizaje: [
+        "Observación detallada y sistemática",
+        "Análisis visual de información",
+        "Conexión entre imagen y concepto",
+      ],
+      configuracion: {
+        puntosPorRespuestaCorrecta: 25,
+        penalizacionRespuestaIncorrecta: -5,
+        tiempoLimitePorPregunta: 60,
+        intentosPermitidos: 2,
+        mostrarExplicaciones: true,
+        ordenAleatorio: true,
+      },
+      metricas: {
+        dificultadCalculada: 0.65,
+        tiempoEstimadoComplecion: 12,
+        tasaExitoEsperada: 0.75,
+        engagementScore: 0.85,
+      },
       preguntas: [
         {
           pregunta: `¿Qué elementos principales relacionados con ${materia} puedes identificar?`,
@@ -281,6 +363,7 @@ function generarMinijuegoSimulado(contenido: string, tipo: string, materia: stri
           respuestaCorrecta: `Elementos conceptuales de ${temaDetectado}`,
           explicacion: `La imagen contiene elementos educativos importantes relacionados con ${materia} que ayudan a comprender ${temaDetectado}.`,
           puntaje: 25,
+          habilidadCognitiva: "Comprensión",
         },
         {
           pregunta: `¿Cómo se relaciona esta imagen con los conceptos de ${materia}?`,
@@ -294,49 +377,110 @@ function generarMinijuegoSimulado(contenido: string, tipo: string, materia: stri
           explicacion:
             "Las imágenes educativas sirven para concretizar conceptos abstractos y facilitar la comprensión.",
           puntaje: 30,
+          habilidadCognitiva: "Aplicación",
         },
       ],
-      tiempoEstimado: "5-7 minutos",
-      arquetipos: ["visual", "creativo"],
-      objetivosAprendizaje: [
-        "Observación detallada y sistemática",
-        "Análisis visual de información",
-        "Conexión entre imagen y concepto",
-      ],
+      nota: `Minijuego generado automáticamente basado en: "${contenido.substring(0, 100)}..."`,
+      simuladorInteligente: true,
     },
     archivo: {
       titulo: `Comprensión Documental: ${temaDetectado}`,
       descripcion: "Análisis y comprensión de documento educativo",
       tipo: "completar" as const,
+      materia,
+      nivel: "Secundario",
       dificultad: "Medio" as const,
-      preguntas: generarPreguntasDocumento(contenido, materia, temaDetectado),
       tiempoEstimado: "10-12 minutos",
       arquetipos: ["analítico", "lector"],
+      generadoPorIA: false,
+      proveedorIA: "Simulador",
       objetivosAprendizaje: [
         "Comprensión lectora avanzada",
         "Extracción de ideas principales",
         "Síntesis de información",
       ],
+      configuracion: {
+        puntosPorRespuestaCorrecta: 25,
+        penalizacionRespuestaIncorrecta: -5,
+        tiempoLimitePorPregunta: 60,
+        intentosPermitidos: 2,
+        mostrarExplicaciones: true,
+        ordenAleatorio: true,
+      },
+      metricas: {
+        dificultadCalculada: 0.65,
+        tiempoEstimadoComplecion: 12,
+        tasaExitoEsperada: 0.75,
+        engagementScore: 0.85,
+      },
+      preguntas: generarPreguntasDocumento(contenido, materia, temaDetectado),
+      nota: `Minijuego generado automáticamente basado en: "${contenido.substring(0, 100)}..."`,
+      simuladorInteligente: true,
     },
     link: {
       titulo: `Exploración Web: ${temaDetectado}`,
       descripcion: "Análisis de recurso digital educativo",
       tipo: "verdadero_falso" as const,
+      materia,
+      nivel: "Secundario",
       dificultad: "Fácil" as const,
-      preguntas: generarPreguntasWeb(contenido, materia, temaDetectado),
       tiempoEstimado: "6-8 minutos",
       arquetipos: ["digital", "explorador"],
+      generadoPorIA: false,
+      proveedorIA: "Simulador",
       objetivosAprendizaje: [
         "Evaluación de fuentes digitales",
         "Comprensión de contenido web",
         "Pensamiento crítico digital",
       ],
+      configuracion: {
+        puntosPorRespuestaCorrecta: 25,
+        penalizacionRespuestaIncorrecta: -5,
+        tiempoLimitePorPregunta: 60,
+        intentosPermitidos: 2,
+        mostrarExplicaciones: true,
+        ordenAleatorio: true,
+      },
+      metricas: {
+        dificultadCalculada: 0.65,
+        tiempoEstimadoComplecion: 12,
+        tasaExitoEsperada: 0.75,
+        engagementScore: 0.85,
+      },
+      preguntas: generarPreguntasWeb(contenido, materia, temaDetectado),
+      nota: `Minijuego generado automáticamente basado en: "${contenido.substring(0, 100)}..."`,
+      simuladorInteligente: true,
     },
     debate: {
       titulo: `Debate Educativo: ${temaDetectado}`,
       descripcion: `Sesión de debate estructurado sobre ${materia} con argumentación crítica`,
       tipo: "debate" as const,
+      materia,
+      nivel: "Secundario",
       dificultad: "Medio" as const,
+      tiempoEstimado: "15-20 minutos",
+      arquetipos: ["debatidor", "analítico"],
+      generadoPorIA: false,
+      proveedorIA: "Simulador",
+      objetivosAprendizaje: [
+        "Desarrollar habilidades de argumentación",
+        "Fomentar el pensamiento crítico",
+        "Practicar la escucha activa y el respeto por opiniones diversas",
+      ],
+      configuracion: {
+        puntosPorRespuestaCorrecta: 25,
+        penalizacionRespuestaIncorrecta: -5,
+        tiempoLimitePorPregunta: 60,
+        intentosPermitidos: 2,
+        mostrarExplicaciones: true,
+        ordenAleatorio: true,
+      },
+      metricas: {
+        dificultadCalculada: 0.65,
+        tiempoEstimadoComplecion: 12,
+        tasaExitoEsperada: 0.75,
+        engagementScore: 0.85,
+      },
       preguntas: [
         {
           pregunta: `¿La tecnología mejora o perjudica el aprendizaje en ${materia}?`,
@@ -348,24 +492,45 @@ function generarMinijuegoSimulado(contenido: string, tipo: string, materia: stri
           ],
           explicacion: `Este debate fomenta la reflexión crítica sobre el papel de la tecnología en la educación de ${materia}`,
           puntaje: 50,
+          habilidadCognitiva: "Análisis",
         },
-      ],
-      tiempoEstimado: "15-20 minutos",
-      arquetipos: ["debatidor", "analítico"],
-      objetivosAprendizaje: [
-        "Desarrollar habilidades de argumentación",
-        "Fomentar el pensamiento crítico",
-        "Practicar la escucha activa y el respeto por opiniones diversas",
       ],
       modalidadColaborativa: true,
       habilidadesSociales: ["argumentación", "escucha activa", "respeto por la diversidad de opiniones"],
+      nota: `Minijuego generado automáticamente basado en: "${contenido.substring(0, 100)}..."`,
+      simuladorInteligente: true,
     },
 
     equipo: {
       titulo: `Proyecto Colaborativo: ${temaDetectado}`,
       descripcion: `Desafío de equipo que requiere colaboración y resolución conjunta de problemas en ${materia}`,
       tipo: "equipo" as const,
+      materia,
+      nivel: "Secundario",
       dificultad: "Medio" as const,
+      tiempoEstimado: "20-25 minutos",
+      arquetipos: ["colaborativo", "social"],
+      generadoPorIA: false,
+      proveedorIA: "Simulador",
+      objetivosAprendizaje: [
+        "Desarrollar habilidades de trabajo en equipo",
+        "Aplicar conocimientos en proyectos prácticos",
+        "Fomentar la comunicación efectiva",
+      ],
+      configuracion: {
+        puntosPorRespuestaCorrecta: 25,
+        penalizacionRespuestaIncorrecta: -5,
+        tiempoLimitePorPregunta: 60,
+        intentosPermitidos: 2,
+        mostrarExplicaciones: true,
+        ordenAleatorio: true,
+      },
+      metricas: {
+        dificultadCalculada: 0.65,
+        tiempoEstimadoComplecion: 12,
+        tasaExitoEsperada: 0.75,
+        engagementScore: 0.85,
+      },
       preguntas: [
         {
           pregunta: `Trabajen en equipo para crear una solución innovadora relacionada con ${materia}`,
@@ -379,17 +544,13 @@ function generarMinijuegoSimulado(contenido: string, tipo: string, materia: stri
           equiposRequeridos: 3,
           explicacion: `Este proyecto desarrolla habilidades colaborativas mientras se aplican conocimientos de ${materia}`,
           puntaje: 75,
+          habilidadCognitiva: "Síntesis",
         },
-      ],
-      tiempoEstimado: "20-25 minutos",
-      arquetipos: ["colaborativo", "social"],
-      objetivosAprendizaje: [
-        "Desarrollar habilidades de trabajo en equipo",
-        "Aplicar conocimientos en proyectos prácticos",
-        "Fomentar la comunicación efectiva",
       ],
       modalidadColaborativa: true,
       habilidadesSociales: ["trabajo en equipo", "comunicación", "liderazgo compartido", "coordinación"],
+      nota: `Minijuego generado automáticamente basado en: "${contenido.substring(0, 100)}..."`,
+      simuladorInteligente: true,
     },
   }
 
@@ -521,6 +682,7 @@ function generarPreguntasInteligentes(contenido: string, palabrasClave: string[]
       respuestaCorrecta: `El tema central del contenido de ${materia}`,
       explicacion: `El contenido se enfoca en conceptos fundamentales de ${materia} que son esenciales para la comprensión del tema.`,
       puntaje: 25,
+      habilidadCognitiva: "Comprensión",
     },
     {
       pregunta:
@@ -537,6 +699,20 @@ function generarPreguntasInteligentes(contenido: string, palabrasClave: string[]
       explicacion:
         "En el contexto educativo, los conceptos se interrelacionan para formar una comprensión integral del tema.",
       puntaje: 30,
+      habilidadCognitiva: "Aplicación",
+    },
+    {
+      pregunta: `¿Qué relación existe entre este tema y otros conceptos de ${materia}?`,
+      opciones: [
+        "No hay relación alguna",
+        "Está completamente aislado",
+        "Se conecta con múltiples conceptos",
+        "Solo se relaciona con un tema",
+      ],
+      respuestaCorrecta: "Se conecta con múltiples conceptos",
+      explicacion: `En ${materia}, los conceptos están interconectados y se refuerzan mutuamente.`,
+      puntaje: 35,
+      habilidadCognitiva: "Análisis",
     },
   ]
 
@@ -557,6 +733,7 @@ function generarPreguntasDocumento(contenido: string, materia: string, tema: str
       respuestaCorrecta: `Los conceptos de ${materia} son fundamentales para comprender ${tema}`,
       explicacion: `El documento educativo enfatiza la importancia de dominar los conceptos básicos de ${materia}.`,
       puntaje: 35,
+      habilidadCognitiva: "Síntesis",
     },
   ]
 }
@@ -570,6 +747,7 @@ function generarPreguntasWeb(contenido: string, materia: string, tema: string) {
       respuestaCorrecta: "Verdadero",
       explicacion: `Los recursos web educativos suelen contener información actualizada y relevante sobre ${materia}.`,
       puntaje: 20,
+      habilidadCognitiva: "Evaluación",
     },
     {
       pregunta: `Verdadero o Falso: La información del enlace es suficiente para comprender completamente ${tema}`,
@@ -578,6 +756,7 @@ function generarPreguntasWeb(contenido: string, materia: string, tema: string) {
       explicacion:
         "Un solo recurso web generalmente proporciona una perspectiva parcial; se recomienda consultar múltiples fuentes.",
       puntaje: 25,
+      habilidadCognitiva: "Análisis",
     },
   ]
 }

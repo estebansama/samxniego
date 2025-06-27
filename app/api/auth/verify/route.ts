@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { adminAuth, adminDb } from "@/lib/firebase-admin"
+import { adminAuth } from "@/lib/firebase-admin"
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,27 +9,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Token requerido" }, { status: 400 })
     }
 
-    // Verificar el token
+    // Verificar el token de Firebase
     const decodedToken = await adminAuth.verifyIdToken(idToken)
-    const uid = decodedToken.uid
-
-    // Obtener perfil del usuario desde Firestore
-    const userDoc = await adminDb.collection("users").doc(uid).get()
-
-    if (!userDoc.exists) {
-      return NextResponse.json({ success: false, error: "Usuario no encontrado" }, { status: 404 })
-    }
-
-    const userProfile = userDoc.data()
 
     return NextResponse.json({
       success: true,
-      user: {
-        uid: decodedToken.uid,
-        email: decodedToken.email,
-        ...userProfile,
-      },
-      message: "Token válido",
+      uid: decodedToken.uid,
+      email: decodedToken.email,
+      verified: true,
     })
   } catch (error: any) {
     console.error("Error verificando token:", error)

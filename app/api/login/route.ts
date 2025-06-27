@@ -4,54 +4,41 @@ export async function POST(request: NextRequest) {
   try {
     const { email, tipo } = await request.json()
 
+    // Simular validación de usuario
     if (!email || !tipo) {
-      return NextResponse.json({ success: false, error: "Email y tipo son requeridos" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "Datos incompletos" }, { status: 400 })
     }
 
-    // Simular validación y generación de token
-    const token = `clasio_${tipo}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-    // Datos simulados del usuario según el tipo
-    const userData = {
-      docente: {
-        id: 1,
-        nombre: "Prof. María González",
-        email,
-        tipo: "docente",
-        materias: ["Matemáticas", "Física"],
-        cursos: ["3°A", "3°B", "4°A"],
-      },
-      alumno: {
-        id: 2,
-        nombre: "Juan Estudiante",
-        email,
-        tipo: "alumno",
-        curso: "3°A",
-        arquetipo: "gamer",
-        nivel: 8,
-        puntos: 1250,
-      },
-      padre: {
-        id: 3,
-        nombre: "Carlos Padre",
-        email,
-        tipo: "padre",
-        hijos: [
-          {
-            nombre: "Juan Estudiante",
-            curso: "3°A",
-            id: 2,
-          },
-        ],
-      },
+    // Simular datos de usuario según el tipo
+    let userData = {
+      id: Math.random().toString(36).substr(2, 9),
+      email,
+      tipo,
+      nombre: "Usuario Demo",
+      activo: true,
     }
 
-    const user = userData[tipo as keyof typeof userData]
+    // Personalizar según el tipo de usuario
+    switch (tipo) {
+      case "docente":
+        userData.nombre = "Profesor Demo"
+        break
+      case "alumno":
+        userData.nombre = "Estudiante Demo"
+        userData = { ...userData, curso: "3°A", puntos: 1250, nivel: 8 }
+        break
+      case "padre":
+        userData.nombre = "Padre Demo"
+        break
+    }
+
+    // Simular token JWT
+    const token = `demo_token_${Date.now()}_${userData.id}`
 
     return NextResponse.json({
       success: true,
+      user: userData,
       token,
-      user,
       message: "Login exitoso",
     })
   } catch (error) {

@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Token requerido" }, { status: 400 })
     }
 
-    // Verificar el token
+    // Verificar el token de Firebase
     const decodedToken = await adminAuth.verifyIdToken(idToken)
     const uid = decodedToken.uid
 
@@ -30,13 +30,11 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("Error en login:", error)
 
-    let errorMessage = "Error interno del servidor"
+    let errorMessage = "Error al iniciar sesión"
     if (error.code === "auth/id-token-expired") {
       errorMessage = "Token expirado"
     } else if (error.code === "auth/id-token-revoked") {
       errorMessage = "Token revocado"
-    } else if (error.code === "auth/invalid-id-token") {
-      errorMessage = "Token inválido"
     }
 
     return NextResponse.json({ success: false, error: errorMessage }, { status: 401 })

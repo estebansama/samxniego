@@ -1,16 +1,14 @@
+#!/usr/bin/env node
+
 const fs = require("fs")
 const path = require("path")
+const admin = require("firebase-admin")
 
 console.log("🔍 Probando integración con Firestore...\n")
 
 // Load environment variables
 const envPath = path.join(process.cwd(), ".env.local")
-if (fs.existsSync(envPath)) {
-  require("dotenv").config({ path: ".env.local" })
-} else {
-  console.log("❌ Archivo .env.local no encontrado")
-  process.exit(1)
-}
+require("dotenv").config({ path: ".env.local" })
 
 const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
 const clientEmail = process.env.FIREBASE_CLIENT_EMAIL
@@ -28,33 +26,22 @@ let adminApp, adminDb
 
 async function initializeFirebase() {
   try {
-    const { initializeApp, cert, getApps } = require("firebase-admin/app")
-    const { getFirestore } = require("firebase-admin/firestore")
-
-    if (clientEmail && privateKey) {
-      console.log("🔑 Usando credenciales de servicio...")
-
-      if (getApps().length === 0) {
-        adminApp = initializeApp({
-          credential: cert({
-            projectId,
-            clientEmail,
-            privateKey: privateKey.replace(/\\n/g, "\n"),
-          }),
-        })
-      } else {
-        adminApp = getApps()[0]
-      }
-    } else {
-      console.log("🔑 Usando credenciales por defecto...")
-      if (getApps().length === 0) {
-        adminApp = initializeApp({ projectId })
-      } else {
-        adminApp = getApps()[0]
-      }
+    const serviceAccount = {
+      projectId,
+      clientEmail,
+      privateKey: privateKey?.replace(/\\n/g, "\n"),
     }
 
-    adminDb = getFirestore(adminApp)
+    if (!admin.apps.length) {
+      adminApp = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId,
+      })
+    } else {
+      adminApp = admin.apps[0]
+    }
+
+    adminDb = admin.firestore()
     console.log("✅ Firebase Admin inicializado correctamente")
     return true
   } catch (error) {
@@ -71,19 +58,19 @@ async function testFirestore() {
   try {
     if (adminDb) {
       // Test write
+      console.log("📝 Probando escritura...")
       const testDoc = adminDb.collection("test").doc("connection-test")
       await testDoc.set({
-        timestamp: new Date(),
-        message: "Prueba de conexión exitosa",
-        version: "1.0",
+        message: "Conexión exitosa",
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
       })
       console.log("✅ Escritura en Firestore: OK")
 
       // Test read
+      console.log("📖 Probando lectura...")
       const doc = await testDoc.get()
       if (doc.exists) {
-        console.log("✅ Lectura de Firestore: OK")
-        console.log("📄 Datos:", doc.data())
+        console.log("✅ Datos leídos:", doc.data())
       }
 
       // Test user collection structure
@@ -101,6 +88,7 @@ async function testFirestore() {
       }
 
       // Clean up test document
+      console.log("🧹 Limpiando datos de prueba...")
       await testDoc.delete()
       console.log("🧹 Documento de prueba eliminado")
     } else {

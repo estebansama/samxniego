@@ -1,208 +1,158 @@
-# Clasio App - Plataforma Educativa con IA
+# Clasio App
 
-Una plataforma educativa innovadora que combina inteligencia artificial, gamificación y colaboración para transformar la experiencia de aprendizaje en colegios secundarios.
+Clasio es una plataforma educativa innovadora que transforma el celular en un aliado educativo mediante inteligencia artificial, gamificación y personalización para revolucionar la experiencia de aprendizaje en colegios secundarios.
 
 ## 🚀 Características Principales
 
-- **IA Educativa**: Generación automática de contenido personalizado
-- **Gamificación**: Sistema de puntos, niveles y logros
-- **Debates Estructurados**: Sesiones de debate con argumentación crítica
-- **Trabajo Colaborativo**: Proyectos de equipo con roles específicos
-- **Sistema de Votaciones**: Propuestas estudiantiles democráticas
-- **Informes Inteligentes**: Análisis de progreso con IA
+### Para Estudiantes
+- **Minijuegos Educativos**: Actividades gamificadas adaptadas a diferentes estilos de aprendizaje
+- **Sistema de Puntos**: Recompensas por participación y logros académicos
+- **Debates Virtuales**: Sesiones de debate estructuradas con IA
+- **Trabajo Colaborativo**: Proyectos en equipo con roles definidos
+- **Sistema de Votaciones**: Participación democrática en decisiones estudiantiles
 
-## 🛠️ Tecnologías
+### Para Docentes
+- **Generador de Contenido con IA**: Creación automática de minijuegos desde cualquier material
+- **Panel de Control**: Monitoreo del progreso estudiantil en tiempo real
+- **Personalización**: Adaptación de contenido según arquetipos de aprendizaje
+- **Análisis Predictivo**: Insights sobre rendimiento y engagement
 
-- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes, Firebase
+### Para Padres
+- **Informes Inteligentes**: Reportes detallados generados con IA
+- **Seguimiento en Tiempo Real**: Monitoreo del progreso académico
+- **Recomendaciones Personalizadas**: Sugerencias para mejorar el aprendizaje
+- **Métricas de Participación**: Análisis de atención y engagement
+
+## 🛠️ Tecnologías Utilizadas
+
+- **Frontend**: Next.js 14, React, TypeScript
+- **Styling**: Tailwind CSS, shadcn/ui
+- **Backend**: Next.js API Routes
 - **Base de Datos**: Firebase Firestore
 - **Autenticación**: Firebase Auth
-- **IA**: OpenAI GPT-4, Google Gemini
-- **UI**: shadcn/ui, Radix UI, Lucide Icons
+- **IA**: OpenAI GPT-4 (integración preparada)
+- **Gráficos**: Recharts
+- **Iconos**: Lucide React
 
 ## 📦 Instalación
 
 1. **Clonar el repositorio**
-\`\`\`bash
-git clone <repository-url>
-cd clasio-app
-\`\`\`
+   \`\`\`bash
+   git clone https://github.com/tu-usuario/clasio-app.git
+   cd clasio-app
+   \`\`\`
 
 2. **Instalar dependencias**
-\`\`\`bash
-npm install
-\`\`\`
+   \`\`\`bash
+   npm install
+   \`\`\`
 
 3. **Configurar variables de entorno**
-\`\`\`bash
-cp .env.example .env.local
-\`\`\`
+   \`\`\`bash
+   cp .env.example .env.local
+   \`\`\`
+   
+   Completar las variables de Firebase y OpenAI en `.env.local`
 
-Completa las variables de entorno:
-- Firebase Configuration (Client & Admin)
-- OpenAI API Key
-- Google Gemini API Key
+4. **Ejecutar en desarrollo**
+   \`\`\`bash
+   npm run dev
+   \`\`\`
 
-4. **Configurar Firebase**
-- Crear proyecto en [Firebase Console](https://console.firebase.google.com)
-- Habilitar Authentication (Email/Password)
-- Crear base de datos Firestore
-- Generar service account key para Admin SDK
-
-5. **Ejecutar en desarrollo**
-\`\`\`bash
-npm run dev
-\`\`\`
+5. **Abrir en el navegador**
+   \`\`\`
+   http://localhost:3000
+   \`\`\`
 
 ## 🔧 Configuración de Firebase
 
-### 1. Configuración del Cliente
-Agrega estas variables a tu `.env.local`:
-\`\`\`env
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
+1. Crear un proyecto en [Firebase Console](https://console.firebase.google.com)
+2. Habilitar Authentication y Firestore
+3. Obtener las credenciales del proyecto
+4. Configurar las variables de entorno según `.env.example`
+
+Ver `FIREBASE_SETUP.md` para instrucciones detalladas.
+
+## 🎮 Modo Demo
+
+La aplicación incluye un modo demo completo que funciona sin configuración de Firebase:
+
+- **Datos simulados**: Usuarios, minijuegos, propuestas de votación
+- **IA simulada**: Generación de contenido y análisis predictivo
+- **Funcionalidad completa**: Todas las características disponibles
+
+## 📱 Arquetipos de Aprendizaje
+
+Clasio identifica y adapta el contenido según diferentes arquetipos:
+
+- **🎮 Gamer**: Prefiere elementos de juego y competencia
+- **🎨 Creativo**: Aprende mejor con actividades artísticas y expresivas
+- **🧠 Analítico**: Disfruta de problemas lógicos y análisis profundo
+- **💬 Debatidor**: Se motiva con discusiones y argumentación
+- **👥 Colaborativo**: Prefiere trabajo en equipo y proyectos grupales
+
+## 🏗️ Estructura del Proyecto
+
 \`\`\`
-
-### 2. Configuración del Admin SDK
-\`\`\`env
-FIREBASE_PROJECT_ID=
-FIREBASE_CLIENT_EMAIL=
-FIREBASE_PRIVATE_KEY=
+clasio-app/
+├── app/                    # Páginas y rutas de Next.js
+│   ├── alumno/            # Panel del estudiante
+│   ├── docente/           # Panel del docente
+│   ├── padre/             # Panel de padres
+│   ├── votaciones/        # Sistema de votaciones
+│   └── api/               # API Routes
+├── components/            # Componentes reutilizables
+│   ├── ui/               # Componentes de UI (shadcn)
+│   ├── debate-session.tsx
+│   └── team-challenge.tsx
+├── lib/                   # Utilidades y configuración
+│   ├── firebase.ts
+│   ├── firebase-admin.ts
+│   └── firestore.ts
+├── hooks/                 # Custom hooks
+└── scripts/              # Scripts de utilidad
 \`\`\`
-
-### 3. Reglas de Firestore
-\`\`\`javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Usuarios pueden leer/escribir sus propios datos
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Minijuegos públicos para lectura, solo creadores pueden escribir
-    match /minijuegos/{minijuegoId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        (resource == null || resource.data.creadorId == request.auth.uid);
-    }
-    
-    // Puntuaciones solo del usuario autenticado
-    match /puntuaciones/{puntuacionId} {
-      allow read, write: if request.auth != null && 
-        resource.data.usuarioId == request.auth.uid;
-    }
-    
-    // Propuestas públicas para lectura, autenticados pueden crear
-    match /propuestas/{propuestaId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null && 
-        (resource.data.autorId == request.auth.uid || 
-         request.writeFields.hasOnly(['votos', 'votantes']));
-    }
-  }
-}
-\`\`\`
-
-## 📊 Estructura de Datos
-
-### Usuarios
-\`\`\`typescript
-interface UserProfile {
-  uid: string
-  email: string
-  nombre: string
-  tipo: 'docente' | 'alumno' | 'padre'
-  curso?: string
-  materias?: string[]
-  arquetipo?: string
-  nivel?: number
-  puntos?: number
-  fechaCreacion: string
-}
-\`\`\`
-
-### Minijuegos
-\`\`\`typescript
-interface Minijuego {
-  id: string
-  titulo: string
-  descripcion: string
-  tipo: 'trivia' | 'debate' | 'equipo'
-  materia: string
-  dificultad: 'Fácil' | 'Medio' | 'Difícil'
-  preguntas: any[]
-  creadorId: string
-  fechaCreacion: Date
-  activo: boolean
-}
-\`\`\`
-
-## 🎮 Tipos de Juegos
-
-### 1. Trivia Adaptativa
-- Preguntas personalizadas según arquetipo del estudiante
-- Múltiples niveles de dificultad
-- Explicaciones educativas detalladas
-
-### 2. Debates Estructurados
-- Temas educativos controvertidos
-- Argumentos base para ambas posiciones
-- Sistema de votación y evaluación
-
-### 3. Proyectos Colaborativos
-- Desafíos que requieren trabajo en equipo
-- Roles específicos para cada miembro
-- Objetivos compartidos y métricas de éxito
-
-## 🔐 Autenticación y Seguridad
-
-- Autenticación con Firebase Auth
-- Tokens JWT para API routes
-- Reglas de seguridad en Firestore
-- Validación de datos en cliente y servidor
-
-## 📈 Analíticas y Reportes
-
-- Seguimiento de progreso individual
-- Estadísticas de participación
-- Informes generados con IA
-- Métricas de rendimiento por materia
 
 ## 🚀 Despliegue
 
 ### Vercel (Recomendado)
-\`\`\`bash
-npm run build
-vercel --prod
-\`\`\`
+1. Conectar el repositorio a Vercel
+2. Configurar las variables de entorno
+3. Desplegar automáticamente
 
-### Variables de Entorno en Producción
-Asegúrate de configurar todas las variables de entorno en tu plataforma de despliegue.
+### Otros Proveedores
+La aplicación es compatible con cualquier proveedor que soporte Next.js:
+- Netlify
+- Railway
+- DigitalOcean App Platform
 
 ## 🤝 Contribución
 
 1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+2. Crear una rama para tu feature (`git checkout -b feature/AmazingFeature`)
 3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
 4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+5. Abrir un Pull Request
 
-## 📝 Licencia
+## 📄 Licencia
 
 Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
 
 ## 🆘 Soporte
 
-Para soporte y preguntas:
-- Crear un issue en GitHub
-- Contactar al equipo de desarrollo
+- **Documentación**: Ver archivos en `/docs`
+- **Issues**: Reportar problemas en GitHub Issues
+- **Discusiones**: GitHub Discussions para preguntas generales
+
+## 🔮 Roadmap
+
+- [ ] Integración con más proveedores de IA
+- [ ] App móvil nativa
+- [ ] Realidad aumentada para experimentos
+- [ ] Análisis de voz y emociones
+- [ ] Integración con sistemas LMS existentes
+- [ ] Modo offline completo
+- [ ] Soporte multi-idioma
 
 ---
 

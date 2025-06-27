@@ -1,15 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import {
-  type User,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-} from "firebase/auth"
+import type { User } from "firebase/auth"
+import { auth, db } from "@/lib/firebase"
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth"
 import { doc, setDoc, getDoc } from "firebase/firestore"
-import { initFirebase } from "@/lib/firebase"
 
 interface UserProfile {
   uid: string
@@ -31,8 +26,6 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const { auth, db } = initFirebase()
-
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
 
@@ -52,8 +45,6 @@ export function useAuth() {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { auth } = initFirebase()
-
     try {
       const result = await signInWithEmailAndPassword(auth, email, password)
       return { success: true, user: result.user }
@@ -63,8 +54,6 @@ export function useAuth() {
   }
 
   const signUp = async (email: string, password: string, profileData: Partial<UserProfile>) => {
-    const { auth, db } = initFirebase()
-
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password)
 
@@ -85,8 +74,6 @@ export function useAuth() {
   }
 
   const logout = async () => {
-    const { auth } = initFirebase()
-
     try {
       await signOut(auth)
       setUserProfile(null)

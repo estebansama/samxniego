@@ -1,17 +1,24 @@
-// Import the functions you need from the SDKs you need
+// Firebase configuration for client-side
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+}
 
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// Check if Firebase is properly configured
+export function isFirebaseConfigured() {
+  return !!(
+    firebaseConfig.apiKey &&
+    firebaseConfig.authDomain &&
+    firebaseConfig.projectId &&
+    firebaseConfig.storageBucket &&
+    firebaseConfig.messagingSenderId &&
+    firebaseConfig.appId
+  )
+}
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-export const firebaseConfig = {
-  apiKey: "AIzaSyANfbf3CKb99l8sFVMRFyBF7_L68QjwcQA",
-  authDomain: "clasio-781df.firebaseapp.com",
-  databaseURL: "https://clasio-781df-default-rtdb.firebaseio.com",
-  projectId: "clasio-781df",
-  storageBucket: "clasio-781df.firebasestorage.app",
-  messagingSenderId: "1079305343637",
-  appId: "1:1079305343637:web:feae60efd2398fdad2019c",
-  measurementId: "G-41XRMTX832"
-};
+export default firebaseConfig

@@ -2,59 +2,30 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { onAuthStateChanged } from "firebase/auth"
-import { auth, isFirebaseConfigured } from "@/lib/firebaseClient"
+import { useAuth } from "./useAuth"
 
-export function useAuthRedirect() {
+export function useAuthRedirect(requiredUserType?: string) {
+  const { user, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    // If Firebase is not configured, skip auth state listening
-    if (!isFirebaseConfigured || !auth) {
-      console.log("Firebase not configured, skipping auth state listener")
-      return
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          // Verificar que el usuario tenga un perfil completo
-          const token = await user.getIdToken()
-          const response = await fetch("/api/auth/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ idToken: token }),
-          })
-
-          if (response.ok) {
-            const data = await response.json()
-            const userProfile = data.user
-
-            // Guardar en localStorage para compatibilidad
-            localStorage.setItem("clasio_user", JSON.stringify(userProfile))
-            localStorage.setItem("token", token)
-
-            // Redirigir según el tipo de usuario
-            switch (userProfile.tipo) {
-              case "docente":
-                router.push("/docente")
-                break
-              case "alumno":
-                router.push("/alumno")
-                break
-              case "padre":
-                router.push("/padre")
-                break
-              default:
-                router.push("/")
-            }
+    if (!loading) {
+      if (!user) {
+        // No user logged in, redirect to login
+        router.push("/login")
+      } else if (requiredUserType) {
+        // Check if user has the required type
+        const userData = localStorage.getItem("clasio_user")
+        if (userData) {
+          const userProfile = JSON.parse(userData)
+          if (userProfile.tipo !== requiredUserType) {
+            // User doesn't have required type, redirect to their dashboard
+            router.push(`/${userProfile.tipo}`)
           }
-        } catch (error) {
-          console.error("Error verificando usuario:", error)
         }
       }
-    })
+    }
+  }, [user, loading, requiredUserType, router])
 
-    return () => unsubscribe()
-  }, [router])
+  return { user, loading }
 }

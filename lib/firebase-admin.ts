@@ -3,17 +3,24 @@ import { getAuth } from "firebase-admin/auth"
 import { getFirestore } from "firebase-admin/firestore"
 
 const firebaseAdminConfig = {
-  credential: cert({
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-  }),
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
 }
 
 // Initialize Firebase Admin
-const adminApp = getApps().length === 0 ? initializeApp(firebaseAdminConfig, "admin") : getApps()[0]
+const app =
+  getApps().length === 0
+    ? initializeApp({
+        credential: cert(firebaseAdminConfig),
+        projectId: process.env.FIREBASE_PROJECT_ID,
+      })
+    : getApps()[0]
 
-export const adminAuth = getAuth(adminApp)
-export const adminDb = getFirestore(adminApp)
+// Initialize Firebase Admin Authentication and get a reference to the service
+export const adminAuth = getAuth(app)
 
-export default adminApp
+// Initialize Cloud Firestore and get a reference to the service
+export const adminDb = getFirestore(app)
+
+export default app
